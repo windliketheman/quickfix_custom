@@ -36,60 +36,84 @@
 #include <iostream>
 #include <fstream>
 
+#include "TestApplication.h"
+
 void wait()
 {
-  std::cout << "Type Ctrl-C to quit" << std::endl;
-  while(true)
-  {
-    FIX::process_sleep(1);
-  }
+    std::cout << "Type Ctrl-C to quit" << std::endl;
+    while(true)
+    {
+        FIX::process_sleep(1);
+    }
+}
+
+void excuteTest(std::string fileName)
+{
+    TestApplication application;
+    FIX::SessionSettings settings(fileName);
+    FIX::FileStoreFactory storeFactory(settings);
+    FIX::SocketAcceptor acceptor(application, storeFactory, settings);
+    acceptor.start();
+    // while( condition == true ) { do something; }
+    acceptor.stop();
 }
 
 int main( int argc, char** argv )
 {
-  if ( argc < 2 )
-  {
+    if ( argc < 2 )
+    {
+        if (argc < 2) return 1;
+        std::string fileName = argv[1];
+
+        // test
+        excuteTest(fileName);
+
+        return 0;
+
+#if 0
     std::cout << "usage: " << argv[ 0 ]
     << " FILE." << std::endl;
     return 0;
-  }
-  std::string file = argv[ 1 ];
+#endif
+    }
+
+    std::string file = argv[ 1 ];
 #ifdef HAVE_SSL
-  std::string isSSL;
-  if (argc > 2)
-  {
-    isSSL.assign(argv[2]);
-  }
+    std::string isSSL;
+    if (argc > 2)
+    {
+        isSSL.assign(argv[2]);
+    }
 #endif
 
-  FIX::Acceptor * acceptor = 0;
-  try
-  {
-    FIX::SessionSettings settings( file );
+    FIX::Acceptor * acceptor = 0;
+    try
+    {
+        FIX::SessionSettings settings( file );
 
-    Application application;
-    FIX::FileStoreFactory storeFactory( settings );
-    FIX::ScreenLogFactory logFactory( settings );
+        TestApplication application;
+        FIX::FileStoreFactory storeFactory( settings );
+        FIX::ScreenLogFactory logFactory( settings );
 
 #ifdef HAVE_SSL
     if (isSSL.compare("SSL") == 0)
-      acceptor = new FIX::ThreadedSSLSocketAcceptor ( application, storeFactory, settings, logFactory );
+        acceptor = new FIX::ThreadedSSLSocketAcceptor ( application, storeFactory, settings, logFactory );
     else if (isSSL.compare("SSL-ST") == 0)
-      acceptor = new FIX::SSLSocketAcceptor ( application, storeFactory, settings, logFactory );
+        acceptor = new FIX::SSLSocketAcceptor ( application, storeFactory, settings, logFactory );
     else
 #endif
-    acceptor = new FIX::SocketAcceptor ( application, storeFactory, settings, logFactory );
+        acceptor = new FIX::SocketAcceptor ( application, storeFactory, settings, logFactory );
 
-    acceptor->start();
-    wait();
-    acceptor->stop();
-    delete acceptor;
-    return 0;
-  }
-  catch ( std::exception & e )
-  {
-    std::cout << e.what() << std::endl;
-    delete acceptor;
-    return 1;
-  }
+        acceptor->start();
+        wait();
+        acceptor->stop();
+        delete acceptor;
+        return 0;
+    }
+    catch ( std::exception & e )
+    {
+        std::cout << e.what() << std::endl;
+        delete acceptor;
+        return 1;
+    }
 }

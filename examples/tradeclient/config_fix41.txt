@@ -1,0 +1,17 @@
+# default settings for sessions
+[DEFAULT]
+ConnectionType=initiator
+ReconnectInterval=60
+SenderCompID=TW
+
+# session definition
+[SESSION]
+# inherit ConnectionType, ReconnectInterval and SenderCompID from default
+BeginString=FIX.4.1
+TargetCompID=ARCA
+StartTime=12:30:00
+EndTime=23:30:00
+HeartBtInt=20
+SocketConnectPort=9823
+SocketConnectHost=123.123.123.123
+DataDictionary=somewhere/FIX41.xml

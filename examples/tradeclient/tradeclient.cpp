@@ -31,59 +31,50 @@
 #endif
 #include "quickfix/SessionSettings.h"
 #include "quickfix/Log.h"
-#include "Application.h"
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 #include "../../src/getopt-repl.h"
 
+#include "ClientApplication.h"
+
+std::string readFile(const std::string& fileName)
+{
+    std::ifstream inFile;
+    inFile.open(fileName); //open the input file
+
+    std::stringstream strStream;
+    strStream << inFile.rdbuf(); //read the file
+    return strStream.str(); //str holds the content of the file
+}
+
 int main( int argc, char** argv )
 {
-  if ( argc < 2 )
-  {
-    std::cout << "usage: " << argv[ 0 ]
-    << " FILE." << std::endl;
-    return 0;
-  }
-  std::string file = argv[ 1 ];
+    // std::string file = readFile("config_fix42.txt"); // 读取配置文件
+    std::string file = "config_fix42.txt"; // 读取配置文件
+    
+    FIX::Initiator * initiator = 0;
+    try
+    {
+        FIX::SessionSettings settings( file );
+        
+        ClientApplication application;
+        FIX::FileStoreFactory storeFactory( settings ); // 创建基于文件的Messagestore实现。
+        FIX::ScreenLogFactory logFactory( settings );   // 将所有日志事件显示到标准输出
 
-#ifdef HAVE_SSL
-  std::string isSSL;
-  if (argc > 2)
-  {
-    isSSL.assign(argv[2]);
-  }
-#endif
-
-  FIX::Initiator * initiator = 0;
-  try
-  {
-    FIX::SessionSettings settings( file );
-
-    Application application;
-    FIX::FileStoreFactory storeFactory( settings );
-    FIX::ScreenLogFactory logFactory( settings );
-#ifdef HAVE_SSL
-    if (isSSL.compare("SSL") == 0)
-      initiator = new FIX::ThreadedSSLSocketInitiator ( application, storeFactory, settings, logFactory );
-    else if (isSSL.compare("SSL-ST") == 0)
-      initiator = new FIX::SSLSocketInitiator ( application, storeFactory, settings, logFactory );
-    else
-#endif
-    initiator = new FIX::SocketInitiator( application, storeFactory, settings, logFactory );
-
-    initiator->start();
-    application.run();
-    initiator->stop();
-    delete initiator;
-
-    return 0;
-  }
-  catch ( std::exception & e )
-  {
-    std::cout << e.what();
-    delete initiator;
-    return 1;
-  }
+        initiator = new FIX::SocketInitiator(application, storeFactory, settings, logFactory);
+        initiator->start();
+        application.run();
+        initiator->stop();
+        delete initiator;
+        return 0;
+    }
+    catch ( std::exception & e )
+    {
+        std::cout << e.what();
+        delete initiator;
+        return 1;
+    }
 }

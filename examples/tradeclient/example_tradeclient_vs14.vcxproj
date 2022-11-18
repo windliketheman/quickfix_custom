@@ -125,16 +125,23 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
+    <ClCompile Include="ClientApplication.cpp" />
     <ClCompile Include="tradeclient.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application.h" />
+    <ClInclude Include="ClientApplication.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\C++\quickfix_vs14.vcxproj">
       <Project>{d5d558ea-bbac-4862-a946-d3881bace3b7}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="config_fix40.txt" />
+    <Text Include="config_fix41.txt" />
+    <Text Include="config_fix42.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
