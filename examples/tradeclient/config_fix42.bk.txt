@@ -1,0 +1,26 @@
+# default settings for sessions
+[DEFAULT]
+ConnectionType=initiator
+ReconnectInterval=60
+SenderCompID=oms3
+FileLogPath=./client_log
+
+# session definition
+[SESSION]
+BeginString=FIX.4.2
+TargetCompID=test3
+StartTime=00:00:00
+EndTime=23:59:59
+# overide default setting for RecconnectInterval
+ReconnectInterval=60
+HeartBtInt=20
+SocketConnectPort=58898
+SocketConnectHost=127.0.0.1
+# (optional) alternate connection ports and hosts to cycle through on failover
+SocketConnectPort1=8392
+SocketConnectHost1=8.8.8.8
+SocketConnectPort2=2932
+SocketConnectHost2=12.12.12.12
+FileStorePath=./client
+UseDataDictionary=N
+DataDictionary=somewhere/FIX42.xml

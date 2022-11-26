@@ -12,6 +12,13 @@
 #include "quickfix/fix42/OrderCancelReject.h"
 #include "quickfix/fix42/OrderCancelReplaceRequest.h"
 
+#include "quickfix/fix50/NewOrderSingle.h"
+#include "quickfix/fix50/ExecutionReport.h"
+#include "quickfix/fix50/OrderCancelRequest.h"
+#include "quickfix/fix50/OrderCancelReject.h"
+#include "quickfix/fix50/OrderCancelReplaceRequest.h"
+#include "quickfix/fix50/MarketDataRequest.h"
+
 #include <queue>
 
 class ClientApplication :
@@ -36,7 +43,7 @@ private:
     void onMessage(const FIX42::ExecutionReport&, const FIX::SessionID&);
     void onMessage(const FIX42::OrderCancelReject&, const FIX::SessionID&);
 
-    void queryEnterOrder();
+    void queryNewOrder();
     void queryCancelOrder();
     void queryReplaceOrder();
     void queryMarketDataRequest();
@@ -44,6 +51,10 @@ private:
     FIX42::NewOrderSingle queryNewOrderSingle42();
     FIX42::OrderCancelRequest queryOrderCancelRequest42();
     FIX42::OrderCancelReplaceRequest queryCancelReplaceRequest42();
+
+    FIX50::NewOrderSingle queryNewOrderSingle50();
+    FIX50::OrderCancelRequest queryOrderCancelRequest50();
+    FIX50::OrderCancelReplaceRequest queryCancelReplaceRequest50();
 
     void queryHeader(FIX::Header& header);
     char queryAction();

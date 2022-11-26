@@ -54,7 +54,7 @@ void ClientApplication::run()
 
             if (action == '1')
                 // 创建新订单
-                queryEnterOrder();
+                queryNewOrder();
             else if (action == '2')
                 // 取消已有订单
                 queryCancelOrder();
@@ -74,7 +74,7 @@ void ClientApplication::run()
     }
 }
 
-void ClientApplication::queryEnterOrder()
+void ClientApplication::queryNewOrder()
 {
     // 手动输入Fix版本
     int version = queryVersion();
@@ -83,15 +83,19 @@ void ClientApplication::queryEnterOrder()
 
     switch (version) {
     case 42:
-        // 构造新订单数据
+        // 构造创建订单数据
         order = queryNewOrderSingle42();
+        break;
+    case 50:
+        // 构造创建订单数据
+        order = queryNewOrderSingle50();
         break;
     default:
         std::cerr << "No test for version " << version << std::endl;
         break;
     }
 
-    if (queryConfirm("Send order"))
+    if (queryConfirm("Send enter order"))
         // 将订单发送
         FIX::Session::sendToTarget(order);
 }
@@ -108,12 +112,16 @@ void ClientApplication::queryCancelOrder()
         // 构造取消订单数据
         cancel = queryOrderCancelRequest42();
         break;
+    case 50:
+        // 构造取消订单数据
+        cancel = queryOrderCancelRequest50();
+        break;
     default:
         std::cerr << "No test for version " << version << std::endl;
         break;
     }
 
-    if (queryConfirm("Send cancel"))
+    if (queryConfirm("Send cancel order"))
         // 将订单发送
         FIX::Session::sendToTarget(cancel);
 }
@@ -130,12 +138,16 @@ void ClientApplication::queryReplaceOrder()
         // 构造修改订单数据
         replace = queryCancelReplaceRequest42();
         break;
+    case 50:
+        // 构造修改订单数据
+        replace = queryCancelReplaceRequest50();
+        break;
     default:
         std::cerr << "No test for version " << version << std::endl;
         break;
     }
 
-    if (queryConfirm("Send replace"))
+    if (queryConfirm("Send replace order"))
         // 将订单发送
         FIX::Session::sendToTarget(replace);
 }
@@ -148,12 +160,14 @@ void ClientApplication::queryMarketDataRequest()
     FIX::Message md;
 
     switch (version) {
+    case 42:
+        // 注意：查询订单，业务上用不到，所以Fix42也没有示例
+        std::cerr << "No test for version " << version << std::endl;
     default:
         std::cerr << "No test for version " << version << std::endl;
         break;
     }
 
-    // 注意：查询订单，业务上用不到，所以Fix42也没有示例
     FIX::Session::sendToTarget(md);
 }
 
@@ -162,7 +176,7 @@ FIX42::NewOrderSingle ClientApplication::queryNewOrderSingle42()
     FIX::OrdType ordType;
 
     // 构造创建消息：
-    // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>, 
+    // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
     // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, HandlInst <21>, OrderQty <38>,
     // OrdType <40>, Side <54>, Symbol <55>, TimeInForce <59>, TransactTime <60>, CheckSum <10>
     FIX42::NewOrderSingle newOrderSingle(
@@ -185,7 +199,7 @@ FIX42::NewOrderSingle ClientApplication::queryNewOrderSingle42()
 FIX42::OrderCancelRequest ClientApplication::queryOrderCancelRequest42()
 {
     // 构造创建消息：
-    // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>, 
+    // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
     // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, OrderQty <38>,
     // OrigClOrdID <41>, Side <54>, Symbol <55>, TransactTime <60>, CheckSum <10>
     FIX42::OrderCancelRequest orderCancelRequest(queryOrigClOrdID(),
@@ -207,8 +221,93 @@ FIX42::OrderCancelReplaceRequest ClientApplication::queryCancelReplaceRequest42(
 
     if (queryConfirm("New price"))
         cancelReplaceRequest.set(queryPrice());
-    if (queryConfirm("New quantity"))
-        cancelReplaceRequest.set(queryOrderQty());
+    
+    cancelReplaceRequest.set(queryOrderQty());
+
+    // 设置消息header
+    queryHeader(cancelReplaceRequest.getHeader());
+
+    return cancelReplaceRequest;
+}
+
+FIX50::NewOrderSingle ClientApplication::queryNewOrderSingle50()
+{
+    FIX::OrdType ordType;
+
+    // 构造创建消息：
+    // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
+    // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, HandlInst <21>, OrderQty <38>,
+    // OrdType <40>, Side <54>, Symbol <55>, TimeInForce <59>, TransactTime <60>, CheckSum <10>
+    FIX50::NewOrderSingle newOrderSingle(
+        queryClOrdID(), 
+        querySide(),
+        FIX::TransactTime(),
+        ordType = queryOrdType()
+    );
+
+    newOrderSingle.set(queryOrderQty());
+    newOrderSingle.set(queryTimeInForce());
+    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
+        newOrderSingle.set(queryPrice());
+    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
+        newOrderSingle.set(queryStopPx());
+
+    // set routing type
+    newOrderSingle.setField(20005, "19"); // gateway
+    newOrderSingle.setField(207, "US");   // SecurityExchange <207> field, US | USOTC
+    newOrderSingle.setField(100, "0");    // ExDestination <100> field, see: jcoms::EDestinationID
+    newOrderSingle.setField(55, "LNUX");  // Symbol <55> field, 
+
+    // 设置消息header
+    queryHeader(newOrderSingle.getHeader());
+
+    return newOrderSingle;
+}
+
+FIX50::OrderCancelRequest ClientApplication::queryOrderCancelRequest50()
+{
+    // 构造创建消息：
+  // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
+  // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, OrderQty <38>,
+  // OrigClOrdID <41>, Side <54>, Symbol <55>, TransactTime <60>, CheckSum <10>
+    FIX50::OrderCancelRequest orderCancelRequest(
+        queryOrigClOrdID(), 
+        queryClOrdID(),
+        querySide(),
+        FIX::TransactTime()
+    );
+
+    orderCancelRequest.set(queryOrderQty());
+
+    // set routing type
+    orderCancelRequest.setField(20005, "19");
+    orderCancelRequest.setField(55, "LNUX");  // Symbol <55> field, 
+
+    // 设置消息header
+    queryHeader(orderCancelRequest.getHeader());
+
+    return orderCancelRequest;
+}
+
+FIX50::OrderCancelReplaceRequest ClientApplication::queryCancelReplaceRequest50()
+{
+    FIX50::OrderCancelReplaceRequest cancelReplaceRequest(
+        queryOrigClOrdID(), 
+        queryClOrdID(),
+        querySide(), 
+        FIX::TransactTime(),
+        queryOrdType()
+    );
+
+    if (queryConfirm("New price"))
+        cancelReplaceRequest.set(queryPrice());
+    
+    cancelReplaceRequest.set(queryOrderQty());
+        
+
+    // set routing type
+    cancelReplaceRequest.setField(20005, "19");
+    cancelReplaceRequest.setField(55, "LNUX");  // Symbol <55> field, 
 
     // 设置消息header
     queryHeader(cancelReplaceRequest.getHeader());
@@ -270,8 +369,7 @@ int ClientApplication::queryVersion()
     default: throw std::exception();
     }
 #else
-    // 目前程序只对4.2测试
-    return 42;
+    return 50;
 #endif
 }
 

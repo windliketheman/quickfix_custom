@@ -66,7 +66,7 @@ int main( int argc, char** argv )
 
         initiator = new FIX::SocketInitiator(application, storeFactory, settings, logFactory);
         initiator->start();
-        application.run();
+        application.run(); // Ñ­­h±OÂ Ý”Èë
         initiator->stop();
         delete initiator;
         return 0;
