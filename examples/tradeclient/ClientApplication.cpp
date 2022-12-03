@@ -1,4 +1,4 @@
-#ifdef _MSC_VER
+ï»¿#ifdef _MSC_VER
 #pragma warning( disable : 4503 4355 4786 )
 #endif
 
@@ -7,6 +7,9 @@
 #include <iostream>
 
 #include "ClientApplication.h"
+
+#define GATEWAY_SPDR_TESTING  0
+#define GATEWAY_TESTING       "20"
 
 void ClientApplication::onLogon(const FIX::SessionID& sessionID)
 {
@@ -49,20 +52,20 @@ void ClientApplication::run()
     {
         try
         {
-            // ÊÖ¶¯ÊäÈëÏûÏ¢ÀàĞÍ
+            // æ‰‹åŠ¨è¾“å…¥æ¶ˆæ¯ç±»å‹
             char action = queryAction();
 
             if (action == '1')
-                // ´´½¨ĞÂ¶©µ¥
+                // åˆ›å»ºæ–°è®¢å•
                 queryNewOrder();
             else if (action == '2')
-                // È¡ÏûÒÑÓĞ¶©µ¥
+                // å–æ¶ˆå·²æœ‰è®¢å•
                 queryCancelOrder();
             else if (action == '3')
-                // ĞŞ¸ÄÒÑÓĞ¶©µ¥
+                // ä¿®æ”¹å·²æœ‰è®¢å•
                 queryReplaceOrder();
             else if (action == '4')
-                // ×¢Òâ£º²éÑ¯¶©µ¥£¬ÒµÎñÉÏÓÃ²»µ½
+                // æ³¨æ„ï¼šæŸ¥è¯¢è®¢å•ï¼Œä¸šåŠ¡ä¸Šç”¨ä¸åˆ°
                 queryMarketDataRequest();
             else if (action == '5')
                 break;
@@ -76,18 +79,18 @@ void ClientApplication::run()
 
 void ClientApplication::queryNewOrder()
 {
-    // ÊÖ¶¯ÊäÈëFix°æ±¾
+    // æ‰‹åŠ¨è¾“å…¥Fixç‰ˆæœ¬
     int version = queryVersion();
     std::cout << "\nNewOrderSingle\n";
     FIX::Message order;
 
     switch (version) {
     case 42:
-        // ¹¹Ôì´´½¨¶©µ¥Êı¾İ
+        // æ„é€ åˆ›å»ºè®¢å•æ•°æ®
         order = queryNewOrderSingle42();
         break;
     case 50:
-        // ¹¹Ôì´´½¨¶©µ¥Êı¾İ
+        // æ„é€ åˆ›å»ºè®¢å•æ•°æ®
         order = queryNewOrderSingle50();
         break;
     default:
@@ -96,24 +99,24 @@ void ClientApplication::queryNewOrder()
     }
 
     if (queryConfirm("Send enter order"))
-        // ½«¶©µ¥·¢ËÍ
+        // å°†è®¢å•å‘é€
         FIX::Session::sendToTarget(order);
 }
 
 void ClientApplication::queryCancelOrder()
 {
-    // ÊÖ¶¯ÊäÈëFix°æ±¾
+    // æ‰‹åŠ¨è¾“å…¥Fixç‰ˆæœ¬
     int version = queryVersion();
     std::cout << "\nOrderCancelRequest\n";
     FIX::Message cancel;
 
     switch (version) {
     case 42:
-        // ¹¹ÔìÈ¡Ïû¶©µ¥Êı¾İ
+        // æ„é€ å–æ¶ˆè®¢å•æ•°æ®
         cancel = queryOrderCancelRequest42();
         break;
     case 50:
-        // ¹¹ÔìÈ¡Ïû¶©µ¥Êı¾İ
+        // æ„é€ å–æ¶ˆè®¢å•æ•°æ®
         cancel = queryOrderCancelRequest50();
         break;
     default:
@@ -122,24 +125,24 @@ void ClientApplication::queryCancelOrder()
     }
 
     if (queryConfirm("Send cancel order"))
-        // ½«¶©µ¥·¢ËÍ
+        // å°†è®¢å•å‘é€
         FIX::Session::sendToTarget(cancel);
 }
 
 void ClientApplication::queryReplaceOrder()
 {
-    // ÊÖ¶¯ÊäÈëFix°æ±¾
+    // æ‰‹åŠ¨è¾“å…¥Fixç‰ˆæœ¬
     int version = queryVersion();
     std::cout << "\nCancelReplaceRequest\n";
     FIX::Message replace;
 
     switch (version) {
     case 42:
-        // ¹¹ÔìĞŞ¸Ä¶©µ¥Êı¾İ
+        // æ„é€ ä¿®æ”¹è®¢å•æ•°æ®
         replace = queryCancelReplaceRequest42();
         break;
     case 50:
-        // ¹¹ÔìĞŞ¸Ä¶©µ¥Êı¾İ
+        // æ„é€ ä¿®æ”¹è®¢å•æ•°æ®
         replace = queryCancelReplaceRequest50();
         break;
     default:
@@ -148,20 +151,20 @@ void ClientApplication::queryReplaceOrder()
     }
 
     if (queryConfirm("Send replace order"))
-        // ½«¶©µ¥·¢ËÍ
+        // å°†è®¢å•å‘é€
         FIX::Session::sendToTarget(replace);
 }
 
 void ClientApplication::queryMarketDataRequest()
 {
-    // ÊÖ¶¯ÊäÈëFix°æ±¾
+    // æ‰‹åŠ¨è¾“å…¥Fixç‰ˆæœ¬
     int version = queryVersion();
     std::cout << "\nMarketDataRequest\n";
     FIX::Message md;
 
     switch (version) {
     case 42:
-        // ×¢Òâ£º²éÑ¯¶©µ¥£¬ÒµÎñÉÏÓÃ²»µ½£¬ËùÒÔFix42Ò²Ã»ÓĞÊ¾Àı
+        // æ³¨æ„ï¼šæŸ¥è¯¢è®¢å•ï¼Œä¸šåŠ¡ä¸Šç”¨ä¸åˆ°ï¼Œæ‰€ä»¥Fix42ä¹Ÿæ²¡æœ‰ç¤ºä¾‹
         std::cerr << "No test for version " << version << std::endl;
     default:
         std::cerr << "No test for version " << version << std::endl;
@@ -175,7 +178,7 @@ FIX42::NewOrderSingle ClientApplication::queryNewOrderSingle42()
 {
     FIX::OrdType ordType;
 
-    // ¹¹Ôì´´½¨ÏûÏ¢£º
+    // æ„é€ åˆ›å»ºæ¶ˆæ¯ï¼š
     // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
     // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, HandlInst <21>, OrderQty <38>,
     // OrdType <40>, Side <54>, Symbol <55>, TimeInForce <59>, TransactTime <60>, CheckSum <10>
@@ -185,12 +188,12 @@ FIX42::NewOrderSingle ClientApplication::queryNewOrderSingle42()
 
     newOrderSingle.set(queryOrderQty());
     newOrderSingle.set(queryTimeInForce());
-    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // ÏŞ¼Ûµ¥»òÖ¹ËğÏŞ¼Ûµ¥
+    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // é™ä»·å•æˆ–æ­¢æŸé™ä»·å•
         newOrderSingle.set(queryPrice());
-    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // ÓÖÖ¹ËğÏŞ¼Ûµ¥£¿
+    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // åˆæ­¢æŸé™ä»·å•ï¼Ÿ
         newOrderSingle.set(queryStopPx());
 
-    // ÉèÖÃÏûÏ¢header
+    // è®¾ç½®æ¶ˆæ¯header
     queryHeader(newOrderSingle.getHeader());
 
     return newOrderSingle;
@@ -198,7 +201,7 @@ FIX42::NewOrderSingle ClientApplication::queryNewOrderSingle42()
 
 FIX42::OrderCancelRequest ClientApplication::queryOrderCancelRequest42()
 {
-    // ¹¹Ôì´´½¨ÏûÏ¢£º
+    // æ„é€ åˆ›å»ºæ¶ˆæ¯ï¼š
     // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
     // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, OrderQty <38>,
     // OrigClOrdID <41>, Side <54>, Symbol <55>, TransactTime <60>, CheckSum <10>
@@ -207,7 +210,7 @@ FIX42::OrderCancelRequest ClientApplication::queryOrderCancelRequest42()
 
     orderCancelRequest.set(queryOrderQty());
 
-    // ÉèÖÃÏûÏ¢header
+    // è®¾ç½®æ¶ˆæ¯header
     queryHeader(orderCancelRequest.getHeader());
 
     return orderCancelRequest;
@@ -224,7 +227,7 @@ FIX42::OrderCancelReplaceRequest ClientApplication::queryCancelReplaceRequest42(
     
     cancelReplaceRequest.set(queryOrderQty());
 
-    // ÉèÖÃÏûÏ¢header
+    // è®¾ç½®æ¶ˆæ¯header
     queryHeader(cancelReplaceRequest.getHeader());
 
     return cancelReplaceRequest;
@@ -234,64 +237,107 @@ FIX50::NewOrderSingle ClientApplication::queryNewOrderSingle50()
 {
     FIX::OrdType ordType;
 
-    // ¹¹Ôì´´½¨ÏûÏ¢£º
+    // æ„é€ åˆ›å»ºæ¶ˆæ¯ï¼š
     // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
     // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, HandlInst <21>, OrderQty <38>,
     // OrdType <40>, Side <54>, Symbol <55>, TimeInForce <59>, TransactTime <60>, CheckSum <10>
-    FIX50::NewOrderSingle newOrderSingle(
+    FIX50::NewOrderSingle newOrderRequest(
         queryClOrdID(), 
-        querySide(),
+        FIX::Side_BUY,
         FIX::TransactTime(),
         ordType = queryOrdType()
     );
 
-    newOrderSingle.set(queryOrderQty());
-    newOrderSingle.set(queryTimeInForce());
-    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // ÏŞ¼Ûµ¥»òÖ¹ËğÏŞ¼Ûµ¥
-        newOrderSingle.set(queryPrice());
-    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // ÓÖÖ¹ËğÏŞ¼Ûµ¥£¿
-        newOrderSingle.set(queryStopPx());
+    newOrderRequest.set(queryOrderQty());
+    newOrderRequest.set(queryTimeInForce());
+    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // é™ä»·å•æˆ–æ­¢æŸé™ä»·å•
+        newOrderRequest.set(queryPrice());
+    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // åˆæ­¢æŸé™ä»·å•ï¼Ÿ
+        newOrderRequest.set(queryStopPx());
 
-    // set routing type
-    newOrderSingle.setField(20005, "19"); // gateway
-    newOrderSingle.setField(207, "US");   // SecurityExchange <207> field, US | USOTC
-    newOrderSingle.setField(100, "0");    // ExDestination <100> field, see: jcoms::EDestinationID
-    newOrderSingle.setField(55, "LNUX");  // Symbol <55> field, 
+#if GATEWAY_SPDR_TESTING
+    // SPDRç½‘å…³æµ‹è¯•
+    newOrderRequest.setField(20005, GATEWAY_TESTING); // gateway
+    newOrderRequest.setField(207, "US");   // SecurityExchange <207> field, US | USOTC
+    newOrderRequest.setField(100, "0");    // ExDestination <100> field, see: jcoms::EDestinationID
+    newOrderRequest.setField(55, "AAPL");  // Symbol <55> field, 
+#else
+    // IBFIXç½‘å…³æµ‹è¯•
+    newOrderRequest.setField(20005, GATEWAY_TESTING); // gateway
+    newOrderRequest.setField(207, "US");   // SecurityExchange <207> field, US | USOTC
+    newOrderRequest.setField(55, "IBM");  // Symbol <55> field, è‚¡ç¥¨ä»£ç 
 
-    // ÉèÖÃÏûÏ¢header
-    queryHeader(newOrderSingle.getHeader());
+    newOrderRequest.setField(100, "6");    // ExDestination <100> field, see: jcoms::EDestinationID
+    newOrderRequest.setField(15, "USD");
+    // newOrderRequest.setField(207, "O");    // NASDAQ
 
-    return newOrderSingle;
+    // newOrderRequest.setField(1, "U901238"); // Account <1> field
+    newOrderRequest.setField(204, "0");     // CustomerOrFirm <204> field
+    // newOrderRequest.setField(6207, "U90123810");
+    /*
+    Important Notes:
+    â€¢ Please include 100=SMART for STK orders
+    â€¢ Please include 1= U901238 or 1= U90123810 on all the orders
+    â€¢ Please include 204=0 on all the orders
+    â€¢ Please also include the tag 6207 in all the orders, as an unique identifier of each of your individual client
+    */
+#endif
+
+    // è®¾ç½®æ¶ˆæ¯header
+    queryHeader(newOrderRequest.getHeader());
+
+    return newOrderRequest;
 }
 
 FIX50::OrderCancelRequest ClientApplication::queryOrderCancelRequest50()
 {
-    // ¹¹Ôì´´½¨ÏûÏ¢£º
+    // æ„é€ åˆ›å»ºæ¶ˆæ¯ï¼š
   // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
   // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, OrderQty <38>,
   // OrigClOrdID <41>, Side <54>, Symbol <55>, TransactTime <60>, CheckSum <10>
-    FIX50::OrderCancelRequest orderCancelRequest(
+    FIX50::OrderCancelRequest cancelRequest(
         queryOrigClOrdID(), 
         queryClOrdID(),
         querySide(),
         FIX::TransactTime()
     );
 
-    orderCancelRequest.set(queryOrderQty());
+    cancelRequest.set(queryOrderQty());
 
-    // set routing type
-    orderCancelRequest.setField(20005, "19");
-    orderCancelRequest.setField(55, "LNUX");  // Symbol <55> field, 
+#if GATEWAY_SPDR_TESTING
+    // SPDRç½‘å…³æµ‹è¯•
+    cancelRequest.setField(20005, GATEWAY_TESTING);
+    cancelRequest.setField(55, "AAPL");   // Symbol <55> field, 
+    // IBFIXç½‘å…³æµ‹è¯•
+#else
+    cancelRequest.setField(20005, GATEWAY_TESTING);
+    cancelRequest.setField(207, "US");    // SecurityExchange <207> field, US | USOTC
+    cancelRequest.setField(55, "AAPL");   // Symbol <55> field, è‚¡ç¥¨ä»£ç 
 
-    // ÉèÖÃÏûÏ¢header
-    queryHeader(orderCancelRequest.getHeader());
+    cancelRequest.setField(100, "6");    // ExDestination <100> field, see: jcoms::EDestinationID
+    cancelRequest.setField(15, "USD");
 
-    return orderCancelRequest;
+    cancelRequest.setField(1, "U901238"); // Account <1> field
+    cancelRequest.setField(204, "0");     // CustomerOrFirm <204> field
+    cancelRequest.setField(6207, "U90123810");
+    /*
+    Important Notes:
+    â€¢ Please include 100=SMART for STK orders
+    â€¢ Please include 1= U901238 or 1= U90123810 on all the orders
+    â€¢ Please include 204=0 on all the orders
+    â€¢ Please also include the tag 6207 in all the orders, as an unique identifier of each of your individual client
+    */
+#endif
+    
+    // è®¾ç½®æ¶ˆæ¯header
+    queryHeader(cancelRequest.getHeader());
+
+    return cancelRequest;
 }
 
 FIX50::OrderCancelReplaceRequest ClientApplication::queryCancelReplaceRequest50()
 {
-    FIX50::OrderCancelReplaceRequest cancelReplaceRequest(
+    FIX50::OrderCancelReplaceRequest replaceRequest(
         queryOrigClOrdID(), 
         queryClOrdID(),
         querySide(), 
@@ -300,19 +346,39 @@ FIX50::OrderCancelReplaceRequest ClientApplication::queryCancelReplaceRequest50(
     );
 
     if (queryConfirm("New price"))
-        cancelReplaceRequest.set(queryPrice());
+        replaceRequest.set(queryPrice());
     
-    cancelReplaceRequest.set(queryOrderQty());
+    replaceRequest.set(queryOrderQty());
         
+#if GATEWAY_SPDR_TESTING
+    // SPDRç½‘å…³æµ‹è¯•
+    replaceRequest.setField(20005, GATEWAY_TESTING);
+    replaceRequest.setField(55, "AAPL");  // Symbol <55> field, 
+#else
+    // IBFIXç½‘å…³æµ‹è¯•
+    replaceRequest.setField(20005, GATEWAY_TESTING);
+    replaceRequest.setField(207, "US");    // SecurityExchange <207> field, US | USOTC
+    replaceRequest.setField(55, "AAPL");   // Symbol <55> field, è‚¡ç¥¨ä»£ç 
 
-    // set routing type
-    cancelReplaceRequest.setField(20005, "19");
-    cancelReplaceRequest.setField(55, "LNUX");  // Symbol <55> field, 
+    replaceRequest.setField(100, "6");    // ExDestination <100> field, see: jcoms::EDestinationID
+    replaceRequest.setField(15, "USD");
 
-    // ÉèÖÃÏûÏ¢header
-    queryHeader(cancelReplaceRequest.getHeader());
+    replaceRequest.setField(1, "U901238"); // Account <1> field
+    replaceRequest.setField(204, "0");     // CustomerOrFirm <204> field
+    replaceRequest.setField(6207, "U90123810");
+    /*
+    Important Notes:
+    â€¢ Please include 100=SMART for STK orders
+    â€¢ Please include 1= U901238 or 1= U90123810 on all the orders
+    â€¢ Please include 204=0 on all the orders
+    â€¢ Please also include the tag 6207 in all the orders, as an unique identifier of each of your individual client
+    */
+#endif
 
-    return cancelReplaceRequest;
+    // è®¾ç½®æ¶ˆæ¯header
+    queryHeader(replaceRequest.getHeader());
+
+    return replaceRequest;
 }
 
 void ClientApplication::queryHeader(FIX::Header& header)
@@ -324,7 +390,7 @@ void ClientApplication::queryHeader(FIX::Header& header)
         header.setField(queryTargetSubID());
 }
 
-// ÊÖ¶¯ÊäÈëÏûÏ¢ÀàĞÍ
+// æ‰‹åŠ¨è¾“å…¥æ¶ˆæ¯ç±»å‹
 char ClientApplication::queryAction()
 {
     char value;
@@ -344,7 +410,7 @@ char ClientApplication::queryAction()
     return value;
 }
 
-// ÊÖ¶¯ÊäÈëFix°æ±¾
+// æ‰‹åŠ¨è¾“å…¥Fixç‰ˆæœ¬
 int ClientApplication::queryVersion()
 {
 #if 0
@@ -405,7 +471,7 @@ FIX::TargetSubID ClientApplication::queryTargetSubID()
     return FIX::TargetSubID(value);
 }
 
-// »ú¹¹·ÖÅäµÄ¶©µ¥µÄÎ¨Ò»±êÊ¶·û¡£
+// æœºæ„åˆ†é…çš„è®¢å•çš„å”¯ä¸€æ ‡è¯†ç¬¦ã€‚
 FIX::ClOrdID ClientApplication::queryClOrdID()
 {
     std::string value;
@@ -414,7 +480,7 @@ FIX::ClOrdID ClientApplication::queryClOrdID()
     return FIX::ClOrdID(value);
 }
 
-// È¡Ïû»òÌæ»»¶©µ¥Ê±£¬ĞèÒªÖ®Ç°µÄ¶©µ¥µÄClOrdID <11>
+// å–æ¶ˆæˆ–æ›¿æ¢è®¢å•æ—¶ï¼Œéœ€è¦ä¹‹å‰çš„è®¢å•çš„ClOrdID <11>
 FIX::OrigClOrdID ClientApplication::queryOrigClOrdID()
 {
     std::string value;
