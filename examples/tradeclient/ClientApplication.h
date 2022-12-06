@@ -1,4 +1,4 @@
-#ifndef TRADECLIENT_CLIENT_APPLICATION_H
+﻿#ifndef TRADECLIENT_CLIENT_APPLICATION_H
 #define TRADECLIENT_CLIENT_APPLICATION_H
 
 #include "quickfix/Application.h"
@@ -56,10 +56,24 @@ private:
     FIX50::OrderCancelRequest queryOrderCancelRequest50();
     FIX50::OrderCancelReplaceRequest queryCancelReplaceRequest50();
 
-    void queryHeader(FIX::Header& header);
+    void setupHeader(FIX::Header& header);
+    void setupMessage(FIX::Message& message);
+
     char queryAction();
     int queryVersion();
     bool queryConfirm(const std::string& query);
+
+    // 测试期权1
+    void testOption1();
+
+    // 测试期权2
+    void testOption2();
+
+    // 测试期权3
+    void testOption3();
+
+    // 测试期货
+    void testFuture();
 
     FIX::SenderCompID querySenderCompID();
     FIX::TargetCompID queryTargetCompID();

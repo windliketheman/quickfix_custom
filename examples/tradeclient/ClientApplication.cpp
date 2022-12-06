@@ -9,7 +9,10 @@
 #include "ClientApplication.h"
 
 #define GATEWAY_SPDR_TESTING  0
-#define GATEWAY_TESTING       "20"
+#define GATEWAY_SPDR          "19"
+#define GATEWAY_IBFIX         "20"
+
+#define IS_OPTION_TESTING     1
 
 void ClientApplication::onLogon(const FIX::SessionID& sessionID)
 {
@@ -52,6 +55,21 @@ void ClientApplication::run()
     {
         try
         {
+#if IS_OPTION_TESTING
+            // 手动输入消息类型
+            char action = queryAction();
+
+            if (action == '1')
+                testOption1();
+            else if (action == '2')
+                testOption2();
+            else if (action == '3')
+                testOption3();
+            else if (action == '4')
+                testFuture();
+            else if (action == '5')
+                break;
+#else 
             // 手动输入消息类型
             char action = queryAction();
 
@@ -69,6 +87,7 @@ void ClientApplication::run()
                 queryMarketDataRequest();
             else if (action == '5')
                 break;
+#endif
         }
         catch (std::exception& e)
         {
@@ -182,21 +201,21 @@ FIX42::NewOrderSingle ClientApplication::queryNewOrderSingle42()
     // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
     // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, HandlInst <21>, OrderQty <38>,
     // OrdType <40>, Side <54>, Symbol <55>, TimeInForce <59>, TransactTime <60>, CheckSum <10>
-    FIX42::NewOrderSingle newOrderSingle(
+    FIX42::NewOrderSingle message(
         queryClOrdID(), FIX::HandlInst('1'), querySymbol(), querySide(),
         FIX::TransactTime(), ordType = queryOrdType());
 
-    newOrderSingle.set(queryOrderQty());
-    newOrderSingle.set(queryTimeInForce());
+    message.set(queryOrderQty());
+    message.set(queryTimeInForce());
     if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
-        newOrderSingle.set(queryPrice());
+        message.set(queryPrice());
     if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
-        newOrderSingle.set(queryStopPx());
+        message.set(queryStopPx());
 
     // 设置消息header
-    queryHeader(newOrderSingle.getHeader());
+    setupHeader(message.getHeader());
 
-    return newOrderSingle;
+    return message;
 }
 
 FIX42::OrderCancelRequest ClientApplication::queryOrderCancelRequest42()
@@ -205,32 +224,32 @@ FIX42::OrderCancelRequest ClientApplication::queryOrderCancelRequest42()
     // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
     // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, OrderQty <38>,
     // OrigClOrdID <41>, Side <54>, Symbol <55>, TransactTime <60>, CheckSum <10>
-    FIX42::OrderCancelRequest orderCancelRequest(queryOrigClOrdID(),
+    FIX42::OrderCancelRequest message(queryOrigClOrdID(),
         queryClOrdID(), querySymbol(), querySide(), FIX::TransactTime());
 
-    orderCancelRequest.set(queryOrderQty());
+    message.set(queryOrderQty());
 
     // 设置消息header
-    queryHeader(orderCancelRequest.getHeader());
+    setupHeader(message.getHeader());
 
-    return orderCancelRequest;
+    return message;
 }
 
 FIX42::OrderCancelReplaceRequest ClientApplication::queryCancelReplaceRequest42()
 {
-    FIX42::OrderCancelReplaceRequest cancelReplaceRequest(
+    FIX42::OrderCancelReplaceRequest message(
         queryOrigClOrdID(), queryClOrdID(), FIX::HandlInst('1'),
         querySymbol(), querySide(), FIX::TransactTime(), queryOrdType());
 
     if (queryConfirm("New price"))
-        cancelReplaceRequest.set(queryPrice());
+        message.set(queryPrice());
     
-    cancelReplaceRequest.set(queryOrderQty());
+    message.set(queryOrderQty());
 
     // 设置消息header
-    queryHeader(cancelReplaceRequest.getHeader());
+    setupHeader(message.getHeader());
 
-    return cancelReplaceRequest;
+    return message;
 }
 
 FIX50::NewOrderSingle ClientApplication::queryNewOrderSingle50()
@@ -241,52 +260,27 @@ FIX50::NewOrderSingle ClientApplication::queryNewOrderSingle50()
     // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
     // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, HandlInst <21>, OrderQty <38>,
     // OrdType <40>, Side <54>, Symbol <55>, TimeInForce <59>, TransactTime <60>, CheckSum <10>
-    FIX50::NewOrderSingle newOrderRequest(
+    FIX50::NewOrderSingle message(
         queryClOrdID(), 
         FIX::Side_BUY,
         FIX::TransactTime(),
         ordType = queryOrdType()
     );
 
-    newOrderRequest.set(queryOrderQty());
-    newOrderRequest.set(queryTimeInForce());
+    message.set(queryOrderQty());
+    message.set(queryTimeInForce());
     if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
-        newOrderRequest.set(queryPrice());
+        message.set(queryPrice());
     if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
-        newOrderRequest.set(queryStopPx());
+        message.set(queryStopPx());
 
-#if GATEWAY_SPDR_TESTING
-    // SPDR网关测试
-    newOrderRequest.setField(20005, GATEWAY_TESTING); // gateway
-    newOrderRequest.setField(207, "US");   // SecurityExchange <207> field, US | USOTC
-    newOrderRequest.setField(100, "0");    // ExDestination <100> field, see: jcoms::EDestinationID
-    newOrderRequest.setField(55, "AAPL");  // Symbol <55> field, 
-#else
-    // IBFIX网关测试
-    newOrderRequest.setField(20005, GATEWAY_TESTING); // gateway
-    newOrderRequest.setField(207, "US");   // SecurityExchange <207> field, US | USOTC
-    newOrderRequest.setField(55, "IBM");  // Symbol <55> field, 股票代码
-
-    newOrderRequest.setField(100, "6");    // ExDestination <100> field, see: jcoms::EDestinationID
-    newOrderRequest.setField(15, "USD");
-    // newOrderRequest.setField(207, "O");    // NASDAQ
-
-    // newOrderRequest.setField(1, "U901238"); // Account <1> field
-    newOrderRequest.setField(204, "0");     // CustomerOrFirm <204> field
-    // newOrderRequest.setField(6207, "U90123810");
-    /*
-    Important Notes:
-    • Please include 100=SMART for STK orders
-    • Please include 1= U901238 or 1= U90123810 on all the orders
-    • Please include 204=0 on all the orders
-    • Please also include the tag 6207 in all the orders, as an unique identifier of each of your individual client
-    */
-#endif
+    // 设置消息公共的field
+    setupMessage(message);
 
     // 设置消息header
-    queryHeader(newOrderRequest.getHeader());
+    setupHeader(message.getHeader());
 
-    return newOrderRequest;
+    return message;
 }
 
 FIX50::OrderCancelRequest ClientApplication::queryOrderCancelRequest50()
@@ -295,49 +289,27 @@ FIX50::OrderCancelRequest ClientApplication::queryOrderCancelRequest50()
   // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
   // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, OrderQty <38>,
   // OrigClOrdID <41>, Side <54>, Symbol <55>, TransactTime <60>, CheckSum <10>
-    FIX50::OrderCancelRequest cancelRequest(
+    FIX50::OrderCancelRequest message(
         queryOrigClOrdID(), 
         queryClOrdID(),
         querySide(),
         FIX::TransactTime()
     );
 
-    cancelRequest.set(queryOrderQty());
+    message.set(queryOrderQty());
 
-#if GATEWAY_SPDR_TESTING
-    // SPDR网关测试
-    cancelRequest.setField(20005, GATEWAY_TESTING);
-    cancelRequest.setField(55, "AAPL");   // Symbol <55> field, 
-    // IBFIX网关测试
-#else
-    cancelRequest.setField(20005, GATEWAY_TESTING);
-    cancelRequest.setField(207, "US");    // SecurityExchange <207> field, US | USOTC
-    cancelRequest.setField(55, "AAPL");   // Symbol <55> field, 股票代码
-
-    cancelRequest.setField(100, "6");    // ExDestination <100> field, see: jcoms::EDestinationID
-    cancelRequest.setField(15, "USD");
-
-    cancelRequest.setField(1, "U901238"); // Account <1> field
-    cancelRequest.setField(204, "0");     // CustomerOrFirm <204> field
-    cancelRequest.setField(6207, "U90123810");
-    /*
-    Important Notes:
-    • Please include 100=SMART for STK orders
-    • Please include 1= U901238 or 1= U90123810 on all the orders
-    • Please include 204=0 on all the orders
-    • Please also include the tag 6207 in all the orders, as an unique identifier of each of your individual client
-    */
-#endif
+    // 设置消息公共的field
+    setupMessage(message);
     
     // 设置消息header
-    queryHeader(cancelRequest.getHeader());
+    setupHeader(message.getHeader());
 
-    return cancelRequest;
+    return message;
 }
 
 FIX50::OrderCancelReplaceRequest ClientApplication::queryCancelReplaceRequest50()
 {
-    FIX50::OrderCancelReplaceRequest replaceRequest(
+    FIX50::OrderCancelReplaceRequest message(
         queryOrigClOrdID(), 
         queryClOrdID(),
         querySide(), 
@@ -346,53 +318,39 @@ FIX50::OrderCancelReplaceRequest ClientApplication::queryCancelReplaceRequest50(
     );
 
     if (queryConfirm("New price"))
-        replaceRequest.set(queryPrice());
+        message.set(queryPrice());
     
-    replaceRequest.set(queryOrderQty());
-        
-#if GATEWAY_SPDR_TESTING
-    // SPDR网关测试
-    replaceRequest.setField(20005, GATEWAY_TESTING);
-    replaceRequest.setField(55, "AAPL");  // Symbol <55> field, 
-#else
-    // IBFIX网关测试
-    replaceRequest.setField(20005, GATEWAY_TESTING);
-    replaceRequest.setField(207, "US");    // SecurityExchange <207> field, US | USOTC
-    replaceRequest.setField(55, "AAPL");   // Symbol <55> field, 股票代码
-
-    replaceRequest.setField(100, "6");    // ExDestination <100> field, see: jcoms::EDestinationID
-    replaceRequest.setField(15, "USD");
-
-    replaceRequest.setField(1, "U901238"); // Account <1> field
-    replaceRequest.setField(204, "0");     // CustomerOrFirm <204> field
-    replaceRequest.setField(6207, "U90123810");
-    /*
-    Important Notes:
-    • Please include 100=SMART for STK orders
-    • Please include 1= U901238 or 1= U90123810 on all the orders
-    • Please include 204=0 on all the orders
-    • Please also include the tag 6207 in all the orders, as an unique identifier of each of your individual client
-    */
-#endif
+    message.set(queryOrderQty());
+    
+    // 设置消息公共的field
+    setupMessage(message);
 
     // 设置消息header
-    queryHeader(replaceRequest.getHeader());
+    setupHeader(message.getHeader());
 
-    return replaceRequest;
-}
-
-void ClientApplication::queryHeader(FIX::Header& header)
-{
-    header.setField(querySenderCompID());
-    header.setField(queryTargetCompID());
-
-    if (queryConfirm("Use a TargetSubID"))
-        header.setField(queryTargetSubID());
+    return message;
 }
 
 // 手动输入消息类型
 char ClientApplication::queryAction()
 {
+#if IS_OPTION_TESTING
+    char value;
+    std::cout << std::endl
+        << "1) 联交所港股期权" << std::endl
+        << "2) 美股期权" << std::endl
+        << "3) 港期所指数期权" << std::endl
+        << "4) 港期所期货" << std::endl
+        << "5) 退出" << std::endl
+        << "请选择: ";
+    std::cin >> value;
+    switch (value)
+    {
+    case '1': case '2': case '3': case '4': case '5': break;
+    default: throw std::exception();
+    }
+    return value;
+#else 
     char value;
     std::cout << std::endl
         << "1) Enter Order" << std::endl
@@ -408,6 +366,7 @@ char ClientApplication::queryAction()
     default: throw std::exception();
     }
     return value;
+#endif
 }
 
 // 手动输入Fix版本
@@ -442,7 +401,7 @@ int ClientApplication::queryVersion()
 bool ClientApplication::queryConfirm(const std::string& query)
 {
     std::string value;
-    std::cout << std::endl << query << "?: ";
+    std::cout << std::endl << query << "? (Y/N) ";
     std::cin >> value;
     return toupper(*value.c_str()) == 'Y';
 }
@@ -590,4 +549,213 @@ FIX::TimeInForce ClientApplication::queryTimeInForce()
     case '5': return FIX::TimeInForce(FIX::TimeInForce_GOOD_TILL_CROSSING);
     default: throw std::exception();
     }
+}
+
+void ClientApplication::setupHeader(FIX::Header& header)
+{
+#if GATEWAY_SPDR_TESTING
+    header.setField(querySenderCompID());
+    header.setField(queryTargetCompID());
+
+    if (queryConfirm("Use a TargetSubID"))
+        header.setField(queryTargetSubID());
+#else
+    header.setField(FIX::SenderCompID("client1"));
+    header.setField(FIX::TargetCompID("gateway"));
+#endif
+}
+
+void ClientApplication::setupMessage(FIX::Message& message)
+{
+#if GATEWAY_SPDR_TESTING
+    // SPDR网关测试
+    message.setField(20005, GATEWAY_SPDR); // gateway
+    message.setField(207, "US");   // SecurityExchange <207> field, US | USOTC
+    message.setField(100, "0");    // ExDestination <100> field, see: jcoms::EDestinationID
+    message.setField(55, "AAPL");  // Symbol <55> field, 
+#else
+    // IBFIX网关测试
+    message.setField(20005, GATEWAY_IBFIX); // gateway
+    
+    message.setField(55, "IBM");    // Symbol <55> field, 股票代码
+    message.setField(100, "0"); // 当指定100=SMART后，还必须指定15或者207
+    message.setField(15, "USD");
+    message.setField(207, "US");    // SecurityExchange
+#endif
+}
+
+
+// 测试期权1
+void ClientApplication::testOption1()
+{
+    FIX::OrdType ordType;
+
+    // 构造创建消息：
+    // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
+    // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, HandlInst <21>, OrderQty <38>,
+    // OrdType <40>, Side <54>, Symbol <55>, TimeInForce <59>, TransactTime <60>, CheckSum <10>
+    FIX50::NewOrderSingle message(
+        queryClOrdID(),
+        FIX::Side_BUY,
+        FIX::TransactTime(),
+        ordType = queryOrdType()
+    );
+
+    message.set(queryOrderQty());
+    message.set(queryTimeInForce());
+    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
+        message.set(queryPrice());
+    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
+        message.set(queryStopPx());
+
+    // 设置消息公共的field
+    setupMessage(message);
+
+    // 设置消息header
+    setupHeader(message.getHeader());
+
+    message.setField(167, "OPT"); // SecurityTyp
+    message.setField(55, "00700"); // Symbol
+    message.setField(207, "HKEX"); // SecurityExchange
+    message.setField(200, "202212"); // MaturityMonthYear
+    message.setField(205, "29"); // MaturityDay
+    message.setField(202, "140"); // strikePrice
+    message.setField(201, "1"); // PutOrCall
+
+    message.setField(15, "HKD");
+
+    
+    if (queryConfirm("创建订单，发送"))
+        // 将订单发送
+        FIX::Session::sendToTarget(message);
+}
+
+// 测试期权2
+void ClientApplication::testOption2()
+{
+    FIX::OrdType ordType;
+
+    // 构造创建消息：
+    // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
+    // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, HandlInst <21>, OrderQty <38>,
+    // OrdType <40>, Side <54>, Symbol <55>, TimeInForce <59>, TransactTime <60>, CheckSum <10>
+    FIX50::NewOrderSingle message(
+        queryClOrdID(),
+        FIX::Side_BUY,
+        FIX::TransactTime(),
+        ordType = queryOrdType()
+    );
+
+    message.set(queryOrderQty());
+    message.set(queryTimeInForce());
+    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
+        message.set(queryPrice());
+    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
+        message.set(queryStopPx());
+
+    // 设置消息公共的field
+    setupMessage(message);
+
+    // 设置消息header
+    setupHeader(message.getHeader());
+
+    message.setField(167, "OPT"); // SecurityTyp
+    message.setField(55, "MSFT"); // Symbol
+    // message.setField(207, "SEHK"); // SecurityExchange
+    message.setField(15, "USD"); // Currency
+    message.setField(200, "202301"); // MaturityMonthYear
+    message.setField(205, "6"); // MaturityDay
+    message.setField(202, "310"); // strikePrice
+    message.setField(201, "1"); // PutOrCall
+
+
+    if (queryConfirm("创建订单，发送"))
+        // 将订单发送
+        FIX::Session::sendToTarget(message);
+}
+
+// 测试期权3
+void ClientApplication::testOption3()
+{
+    FIX::OrdType ordType;
+
+    // 构造创建消息：
+    // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
+    // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, HandlInst <21>, OrderQty <38>,
+    // OrdType <40>, Side <54>, Symbol <55>, TimeInForce <59>, TransactTime <60>, CheckSum <10>
+    FIX50::NewOrderSingle message(
+        queryClOrdID(),
+        FIX::Side_BUY,
+        FIX::TransactTime(),
+        ordType = queryOrdType()
+    );
+
+    message.set(queryOrderQty());
+    message.set(queryTimeInForce());
+    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
+        message.set(queryPrice());
+    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
+        message.set(queryStopPx());
+
+    // 设置消息公共的field
+    setupMessage(message);
+
+    // 设置消息header
+    setupHeader(message.getHeader());
+
+    message.setField(167, "OPT"); // SecurityTyp
+    message.setField(55, "HSI"); // Symbol
+    message.setField(207, "HKEX"); // SecurityExchange
+    message.setField(200, "202212"); // MaturityMonthYear
+    message.setField(205, "29"); // MaturityDay
+    message.setField(202, "19000"); // strikePrice
+    message.setField(201, "1"); // PutOrCall
+
+
+    if (queryConfirm("创建订单，发送"))
+        // 将订单发送
+        FIX::Session::sendToTarget(message);
+}
+
+// 测试期货
+void ClientApplication::testFuture()
+{
+    FIX::OrdType ordType;
+
+    // 构造创建消息：
+    // BeginString <8>, BodyLength <9>, MsgType <35>, MsgSeqNum <34>, SenderCompID <49>,
+    // SendingTime <52>, TargetCompID <56>, ClOrdID <11>, HandlInst <21>, OrderQty <38>,
+    // OrdType <40>, Side <54>, Symbol <55>, TimeInForce <59>, TransactTime <60>, CheckSum <10>
+    FIX50::NewOrderSingle message(
+        queryClOrdID(),
+        FIX::Side_BUY,
+        FIX::TransactTime(),
+        ordType = queryOrdType()
+    );
+
+    message.set(queryOrderQty());
+    message.set(queryTimeInForce());
+    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
+        message.set(queryPrice());
+    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
+        message.set(queryStopPx());
+
+    // 设置消息公共的field
+    setupMessage(message);
+
+    // 设置消息header
+    setupHeader(message.getHeader());
+
+    message.setField(167, "FUT"); // SecurityTyp
+    message.setField(55, "HSI"); // Symbol
+    message.setField(207, "HKEX"); // SecurityExchange
+    message.setField(200, "202212"); // MaturityMonthYear
+    // message.setField(205, ""); // MaturityDay
+    // message.setField(202, ""); // strikePrice
+    // message.setField(201, ""); // PutOrCall
+
+
+    if (queryConfirm("创建订单，发送"))
+        // 将订单发送
+        FIX::Session::sendToTarget(message);
 }
