@@ -43,38 +43,11 @@ private:
     void onMessage(const FIX42::ExecutionReport&, const FIX::SessionID&);
     void onMessage(const FIX42::OrderCancelReject&, const FIX::SessionID&);
 
-    void queryNewOrder();
-    void queryCancelOrder();
-    void queryReplaceOrder();
-    void queryMarketDataRequest();
-
-    FIX42::NewOrderSingle queryNewOrderSingle42();
-    FIX42::OrderCancelRequest queryOrderCancelRequest42();
-    FIX42::OrderCancelReplaceRequest queryCancelReplaceRequest42();
-
-    FIX50::NewOrderSingle queryNewOrderSingle50();
-    FIX50::OrderCancelRequest queryOrderCancelRequest50();
-    FIX50::OrderCancelReplaceRequest queryCancelReplaceRequest50();
-
-    void setupHeader(FIX::Header& header);
-    void setupMessage(FIX::Message& message);
-
-    char queryAction();
+    // 输入信息的一些方法
     int queryVersion();
+    void setConsoleTextColor();
+    void resetConsoleTextColor();
     bool queryConfirm(const std::string& query);
-
-    // 测试期权1
-    void testOption1();
-
-    // 测试期权2
-    void testOption2();
-
-    // 测试期权3
-    void testOption3();
-
-    // 测试期货
-    void testFuture();
-
     FIX::SenderCompID querySenderCompID();
     FIX::TargetCompID queryTargetCompID();
     FIX::TargetSubID queryTargetSubID();
@@ -87,6 +60,28 @@ private:
     FIX::Price queryPrice();
     FIX::StopPx queryStopPx();
     FIX::TimeInForce queryTimeInForce();
+
+    // 测试下单，FIX50
+    void startTestAction();
+    void testNewOrder();
+    void testCancelOrder();
+    void testReplaceOrder();
+    void testMarketDataRequest();
+
+    void setupHeader(FIX::Header& header);
+    void setupMessage(FIX::Message& message);
+
+    // 测试期权，FIX50
+    void startOptionAction();
+    void testOption1();
+    void testOption2();
+    void testOption3();
+    void testFuture();
+
+    // 执行测试用例，FIX50
+    void startTestCaseAction();
+
+
 };
 
 #endif
