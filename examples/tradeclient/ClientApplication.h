@@ -26,10 +26,11 @@ class ClientApplication :
     public FIX::MessageCracker
 {
 public:
+    ClientApplication();
     void run();
 
 private:
-    void onCreate(const FIX::SessionID&) {}
+    void onCreate(const FIX::SessionID&);
     void onLogon(const FIX::SessionID& sessionID);
     void onLogout(const FIX::SessionID& sessionID);
     void toAdmin(FIX::Message&, const FIX::SessionID&) {}
@@ -45,8 +46,6 @@ private:
 
     // 输入信息的一些方法
     int queryVersion();
-    void setConsoleTextColor();
-    void resetConsoleTextColor();
     bool queryConfirm(const std::string& query);
     FIX::SenderCompID querySenderCompID();
     FIX::TargetCompID queryTargetCompID();
@@ -61,18 +60,21 @@ private:
     FIX::StopPx queryStopPx();
     FIX::TimeInForce queryTimeInForce();
 
+    // 工具
+    void printLog(std::string log);
+    std::string getNewClOrdID();
+
     // 测试下单，FIX50
     void startTestAction();
+    void setupTestMessage(FIX::Message& message);
     void testNewOrder();
+    void testModifyOrder();
     void testCancelOrder();
-    void testReplaceOrder();
     void testMarketDataRequest();
-
-    void setupHeader(FIX::Header& header);
-    void setupMessage(FIX::Message& message);
 
     // 测试期权，FIX50
     void startOptionAction();
+    void setupOptionMessage(FIX::Message& message);
     void testOption1();
     void testOption2();
     void testOption3();
@@ -80,8 +82,31 @@ private:
 
     // 执行测试用例，FIX50
     void startTestCaseAction();
+    void setupTestCaseMessage(FIX::Message& message);
+    void testCaseAction1();
+    void testCaseAction2();
+    void testCaseAction3();
 
+    // 工具方法
+    bool implExecutionReport(const FIX::Message& message);
+    void implOrderCancelReject(const FIX::Message& message) const;
+    void implBusinessMessageReject(const FIX::Message& message) const;
 
+private:
+    char m_action{ NULL };
+
+    // 数据变量
+    std::string m_side;
+    FIX::OrdType m_ordType;
+    FIX::TimeInForce m_timeInForce;
+    std::string m_account{};
+    std::string m_symbol{};
+
+    // 生成订单号
+    std::string m_prefix{};
+    int m_count{ 0 };
+    std::string m_clOrdID{};
+    
 };
 
 #endif

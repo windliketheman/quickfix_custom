@@ -3,7 +3,7 @@
 ConnectionType=initiator
 ReconnectInterval=60
 SenderCompID=client1
-FileLogPath=./log/log.txt
+FileLogPath=./log/
 
 # session definition
 [SESSION]

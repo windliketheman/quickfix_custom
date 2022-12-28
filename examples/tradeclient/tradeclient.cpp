@@ -1,4 +1,4 @@
-/****************************************************************************
+ï»¿/****************************************************************************
 ** Copyright (c) 2001-2014
 **
 ** This file is part of the QuickFIX FIX Engine
@@ -22,7 +22,7 @@
 #endif
 
 #include "quickfix/config.h"
-
+#include "quickfix/FileLog.h"
 #include "quickfix/FileStore.h"
 #include "quickfix/SocketInitiator.h"
 #ifdef HAVE_SSL
@@ -52,8 +52,8 @@ std::string readFile(const std::string& fileName)
 
 int main( int argc, char** argv )
 {
-    // std::string file = readFile("config_fix42.txt"); // ¶ÁÈ¡ÅäÖÃÎÄ¼þ
-    std::string file = "config_fix42.txt"; // ¶ÁÈ¡ÅäÖÃÎÄ¼þ
+    // std::string file = readFile("config_fix42.txt"); // è¯»å–é…ç½®æ–‡ä»¶
+    std::string file = "config_fix42.txt"; // è¯»å–é…ç½®æ–‡ä»¶
     
     FIX::Initiator * initiator = 0;
     try
@@ -61,12 +61,13 @@ int main( int argc, char** argv )
         FIX::SessionSettings settings( file );
         
         ClientApplication application;
-        FIX::FileStoreFactory storeFactory( settings ); // ´´½¨»ùÓÚÎÄ¼þµÄMessagestoreÊµÏÖ¡£
-        FIX::ScreenLogFactory logFactory( settings );   // ½«ËùÓÐÈÕÖ¾ÊÂ¼þÏÔÊ¾µ½±ê×¼Êä³ö
+        FIX::FileStoreFactory storeFactory( settings ); // åˆ›å»ºåŸºäºŽæ–‡ä»¶çš„Messagestoreå®žçŽ°ã€‚
+        // FIX::ScreenLogFactory logFactory( settings ); // å°†æ‰€æœ‰æ—¥å¿—äº‹ä»¶æ˜¾ç¤ºåˆ°æ ‡å‡†è¾“å‡º
+        FIX::FileLogFactory logFactory(settings);
 
         initiator = new FIX::SocketInitiator(application, storeFactory, settings, logFactory);
         initiator->start();
-        application.run(); // Ñ­­h±OÂ Ý”Èë
+        application.run(); // å†…éƒ¨æ˜¯forå¾ªçŽ¯ï¼Œç›‘å¬è¾“å…¥
         initiator->stop();
         delete initiator;
         return 0;
