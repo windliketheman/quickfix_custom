@@ -102,8 +102,119 @@ EXCEPT(FIX::DoNotSend)
 void ClientApplication::onMessage(const FIX42::ExecutionReport&, const FIX::SessionID&) {}
 void ClientApplication::onMessage(const FIX42::OrderCancelReject&, const FIX::SessionID&) {}
 
+bool ClientApplication::implExecutionReport(const FIX::Message& message)
+{
+    FIX42::ExecutionReport msg{};
+    if (message.isSetField(FIX::FIELD::ClOrdID))
+    {
+        m_clOrdID = message.getField(FIX::FIELD::ClOrdID);
+        msg.setField(FIX::FIELD::ClOrdID, m_clOrdID);
+    }
+
+    if (message.isSetField(FIX::FIELD::OrigClOrdID))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::OrigClOrdID));
+    }
+
+    if (message.isSetField(FIX::FIELD::Account))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::Account));
+    }
+
+    if (message.isSetField(FIX::FIELD::OrdType))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::OrdType));
+    }
+
+    if (message.isSetField(FIX::FIELD::OrderID))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::OrderID));
+    }
+
+    if (message.isSetField(FIX::FIELD::ExecID))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::ExecID));
+    }
+
+    if (message.isSetField(FIX::FIELD::CumQty))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::CumQty));
+    }
+
+    if (message.isSetField(FIX::FIELD::LeavesQty))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::LeavesQty));
+    }
+
+    if (message.isSetField(FIX::FIELD::OrdStatus))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::OrdStatus));
+    }
+
+    if (message.isSetField(FIX::FIELD::ExecType))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::ExecType));
+    }
+
+    if (message.isSetField(FIX::FIELD::Side))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::Side));
+    }
+
+    if (message.isSetField(FIX::FIELD::Symbol))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::Symbol));
+    }
+
+    if (message.isSetField(FIX::FIELD::OrderQty))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::OrderQty));
+    }
+
+    if (message.isSetField(FIX::FIELD::TransactTime))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::TransactTime));
+    }
+
+    if (msg.isSetField(FIX::FIELD::Price))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::Price));
+    }
+
+    if (msg.isSetField(FIX::FIELD::ExecRefID))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::ExecRefID));
+    }
+
+    if (msg.isSetField(FIX::FIELD::LastPx))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::LastPx));
+    }
+
+    if (msg.isSetField(FIX::FIELD::LastQty))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::LastQty));
+    }
+
+    if (msg.isSetField(FIX::FIELD::TrdMatchID))
+    {
+        msg.setField(message.getFieldRef(FIX::FIELD::TrdMatchID));
+    }
+    return true;
+}
+
+void ClientApplication::implOrderCancelReject(const FIX::Message& message) const
+{
+}
+
+void ClientApplication::implBusinessMessageReject(const FIX::Message& message) const
+{
+}
+
 ClientApplication::ClientApplication()
 {
+    m_account = "12345678";
+
     auto nowTime = std::chrono::system_clock::to_time_t(
         std::chrono::system_clock::now());
     auto now = std::localtime(&nowTime);
@@ -130,8 +241,7 @@ void ClientApplication::run()
                     << "1) 手动下单" << std::endl
                     << "2) 测试期权" << std::endl
                     << "3) 执行测试用例" << std::endl
-                    << "4) 退出" << std::endl
-                    << std::endl;
+                    << "4) 退出" << std::endl;
 
                 std::cin >> action;
                 m_action = action;
@@ -180,8 +290,7 @@ int ClientApplication::queryVersion()
         << "4) FIX.4.3" << std::endl
         << "5) FIX.4.4" << std::endl
         << "6) FIXT.1.1 (FIX.5.0)" << std::endl
-        << "BeginString: " << std::endl
-        << std::endl;
+        << "BeginString: " << std::endl;
 
     char value;
     std::cin >> value;
@@ -197,83 +306,9 @@ int ClientApplication::queryVersion()
     }
 }
 
-bool ClientApplication::queryConfirm(const std::string& query)
-{
-    std::cout << std::endl
-        << query << "? (Y/N) " << std::endl
-        << std::endl;
-
-    std::string value;
-    std::cin >> value;
-    return toupper(*value.c_str()) == 'Y';
-}
-
-FIX::SenderCompID ClientApplication::querySenderCompID()
-{
-    std::cout << std::endl
-        << "SenderCompID: " << std::endl
-        << std::endl;
-
-    std::string value;
-    std::cin >> value;
-    return FIX::SenderCompID(value);
-}
-
-FIX::TargetCompID ClientApplication::queryTargetCompID()
-{
-    std::cout << std::endl
-        << "TargetCompID: " << std::endl
-        << std::endl;
-
-    std::string value;
-    std::cin >> value;
-    return FIX::TargetCompID(value);
-}
-
-FIX::TargetSubID ClientApplication::queryTargetSubID()
-{
-    std::cout << std::endl
-        << "TargetSubID: " << std::endl
-        << std::endl;
-
-    std::string value;
-    std::cin >> value;
-    return FIX::TargetSubID(value);
-}
-
-// 终端分配的订单的唯一标识符。
 FIX::ClOrdID ClientApplication::queryClOrdID()
 {
-    std::cout << std::endl
-        << "ClOrdID: " << std::endl
-        << std::endl;
-
-    std::string value;
-    std::cin >> value;
-    return FIX::ClOrdID(value);
-}
-
-// 取消或替换订单时，需要之前的订单的ClOrdID <11>
-FIX::OrigClOrdID ClientApplication::queryOrigClOrdID()
-{
-    std::cout << std::endl
-        << "OrigClOrdID: " << std::endl
-        << std::endl;
-
-    std::string value;
-    std::cin >> value;
-    return FIX::OrigClOrdID(value);
-}
-
-FIX::Symbol ClientApplication::querySymbol()
-{
-    std::cout << std::endl
-        << "Symbol: " << std::endl
-        << std::endl;
-
-    std::string value;
-    std::cin >> value;
-    return FIX::Symbol(value);
+    return m_prefix + std::to_string(++m_count);
 }
 
 FIX::Side ClientApplication::querySide()
@@ -286,33 +321,21 @@ FIX::Side ClientApplication::querySide()
         << "5) Cross" << std::endl
         << "6) Cross Short" << std::endl
         << "7) Cross Short Exempt" << std::endl
-        << "Side: " << std::endl
-        << std::endl;
+        << "Side: " << std::endl;
 
     char value;
     std::cin >> value;
     switch (value)
     {
-        case '1': return FIX::Side(FIX::Side_BUY);
-        case '2': return FIX::Side(FIX::Side_SELL);
-        case '3': return FIX::Side(FIX::Side_SELL_SHORT);
-        case '4': return FIX::Side(FIX::Side_SELL_SHORT_EXEMPT);
-        case '5': return FIX::Side(FIX::Side_CROSS);
-        case '6': return FIX::Side(FIX::Side_CROSS_SHORT);
-        case '7': return FIX::Side('A');
-        default: throw std::exception();
+    case '1': return FIX::Side(FIX::Side_BUY);
+    case '2': return FIX::Side(FIX::Side_SELL);
+    case '3': return FIX::Side(FIX::Side_SELL_SHORT);
+    case '4': return FIX::Side(FIX::Side_SELL_SHORT_EXEMPT);
+    case '5': return FIX::Side(FIX::Side_CROSS);
+    case '6': return FIX::Side(FIX::Side_CROSS_SHORT);
+    case '7': return FIX::Side('A');
+    default: throw std::exception();
     }
-}
-
-FIX::OrderQty ClientApplication::queryOrderQty()
-{
-    std::cout << std::endl
-        << "OrderQty: " << std::endl
-        << std::endl;
-
-    long value;
-    std::cin >> value;
-    return FIX::OrderQty(value);
 }
 
 FIX::OrdType ClientApplication::queryOrdType()
@@ -322,65 +345,102 @@ FIX::OrdType ClientApplication::queryOrdType()
         << "2) Limit" << std::endl
         << "3) Stop" << std::endl
         << "4) Stop Limit" << std::endl
-        << "OrdType: " << std::endl
-        << std::endl;
+        << "OrdType: " << std::endl;
 
     char value;
     std::cin >> value;
     switch (value)
     {
-        case '1': return FIX::OrdType(FIX::OrdType_MARKET);
-        case '2': return FIX::OrdType(FIX::OrdType_LIMIT);
-        case '3': return FIX::OrdType(FIX::OrdType_STOP);
-        case '4': return FIX::OrdType(FIX::OrdType_STOP_LIMIT);
-        default: throw std::exception();
+    case '1': return FIX::OrdType(FIX::OrdType_MARKET);
+    case '2': return FIX::OrdType(FIX::OrdType_LIMIT);
+    case '3': return FIX::OrdType(FIX::OrdType_STOP);
+    case '4': return FIX::OrdType(FIX::OrdType_STOP_LIMIT);
+    default: throw std::exception();
     }
+}
+
+FIX::TimeInForce ClientApplication::queryTimeInForce()
+{
+    std::cout << std::endl
+        << "0) DAY" << std::endl
+        << "1) GTC" << std::endl
+        << "2) OPG" << std::endl
+        << "3) IOC" << std::endl
+        << "4) FOK" << std::endl
+        << "5) GTX" << std::endl
+        << "6) GTD" << std::endl
+        << "7) ATC" << std::endl
+        << "8) AUC" << std::endl
+        << "TimeInForce: " << std::endl;
+
+    char value;
+    std::cin >> value;
+    switch (value)
+    {
+    case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8':
+        return FIX::TimeInForce(value);
+    default: throw std::exception();
+    }
+}
+
+FIX::Symbol ClientApplication::querySymbol()
+{
+    std::cout << std::endl
+        << "Symbol: " << std::endl;
+
+    std::string value;
+    std::cin >> value;
+    return FIX::Symbol(value);
+}
+
+FIX::Currency ClientApplication::queryCurrency()
+{
+    std::cout << std::endl
+        << "Currency: " << std::endl;
+
+    std::string value;
+    std::cin >> value;
+    return FIX::Currency(value);
+}
+
+FIX::SecurityExchange ClientApplication::querySecurityExchange()
+{
+    std::cout << std::endl
+        << "Exchange: " << std::endl;
+
+    std::string value;
+    std::cin >> value;
+    return FIX::SecurityExchange(value);
 }
 
 FIX::Price ClientApplication::queryPrice()
 {
     std::cout << std::endl
-        << "Price: " << std::endl
-        << std::endl;
+        << "Price: " << std::endl;
 
     double value;
     std::cin >> value;
     return FIX::Price(value);
 }
 
-FIX::StopPx ClientApplication::queryStopPx()
+FIX::OrderQty ClientApplication::queryOrderQty()
 {
     std::cout << std::endl
-        << "StopPx: " << std::endl
-        << std::endl;
+        << "OrderQty: " << std::endl;
 
-    double value;
+    long value;
     std::cin >> value;
-    return FIX::StopPx(value);
+    return FIX::OrderQty(value);
 }
 
-FIX::TimeInForce ClientApplication::queryTimeInForce()
+bool ClientApplication::queryConfirm(const std::string& query)
 {
     std::cout << std::endl
-        << "1) Day" << std::endl
-        << "2) IOC" << std::endl
-        << "3) OPG" << std::endl
-        << "4) GTC" << std::endl
-        << "5) GTX" << std::endl
-        << "TimeInForce: " << std::endl
-        << std::endl;
+        << query << "? (Y/N) " << std::endl;
 
-    char value;
+    std::string value;
     std::cin >> value;
-    switch (value)
-    {
-        case '1': return FIX::TimeInForce(FIX::TimeInForce_DAY);
-        case '2': return FIX::TimeInForce(FIX::TimeInForce_IMMEDIATE_OR_CANCEL);
-        case '3': return FIX::TimeInForce(FIX::TimeInForce_AT_THE_OPENING);
-        case '4': return FIX::TimeInForce(FIX::TimeInForce_GOOD_TILL_CANCEL);
-        case '5': return FIX::TimeInForce(FIX::TimeInForce_GOOD_TILL_CROSSING);
-        default: throw std::exception();
-    }
+    return toupper(*value.c_str()) == 'Y';
 }
 
 void ClientApplication::printLog(std::string log)
@@ -394,9 +454,98 @@ void ClientApplication::printLog(std::string log)
     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 }
 
-std::string ClientApplication::getNewClOrdID()
+void ClientApplication::setupStaticFields(FIX::Message& message)
 {
-    return m_prefix + std::to_string(++m_count);
+    FIX::Header& header = message.getHeader();
+    header.setField(FIX::FIELD::SenderCompID, "client1"); // SenderCompID <49> field，
+    header.setField(FIX::FIELD::TargetCompID, "gateway"); // TargetCompID <56> field，
+
+    message.setField(20005, "20");                        // IB Gateway
+    message.setField(FIX::FIELD::Account, m_account);     // 终端账号，CLientDemo和OrderService通信可以随意取
+}
+
+void ClientApplication::setupCreateMessage(FIX::Message& message)
+{
+    FIX::ClOrdID clOrdID = queryClOrdID();
+    FIX::Side side = m_side;
+    FIX::OrdType ordType = m_ordType;
+    std::string symbol = m_symbol;
+    std::string exDestination = m_exDestination;
+    std::string currency = m_currency;
+    std::string securityExchange = m_securityExchange; // 取值范围：SSE | ZSSE | HKEX | SGX | US | USOTC
+    FIX::TimeInForce timeInForce = m_timeInForce;
+    FIX::OrderQty orderQty = m_orderQty;
+    FIX::Price price = m_price;
+
+    message.setField(FIX::FIELD::ClOrdID, clOrdID);
+    message.setField(FIX::Side(side));
+    message.setField(FIX::OrdType(ordType));
+    message.setField(FIX::FIELD::Symbol, symbol);
+    message.setField(FIX::FIELD::ExDestination, exDestination); // 智能路由，固定传"0"，同时还必须设置Currency(15) 或者 SecurityExchange(207)
+    message.setField(FIX::FIELD::Currency, currency);
+    message.setField(FIX::FIELD::SecurityExchange, securityExchange);
+    message.setField(FIX::TimeInForce(timeInForce));
+    message.setField(FIX::TransactTime());
+
+    // 改单内容：Price、QTY
+    message.setField(FIX::OrderQty(orderQty));
+    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT)
+        message.setField(FIX::Price(price));  // 限价类型要传Price
+    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)
+        message.setField(FIX::Price(price / 2)); // 止损类型要传StopPx
+
+    // 设置公共的静态字段
+    setupStaticFields(message);
+}
+
+void ClientApplication::setupModifyMessage(FIX::Message& message)
+{
+    FIX::OrigClOrdID origClOrdID = m_clOrdID;
+    FIX::ClOrdID clOrdID = queryClOrdID();
+    FIX::Side side = m_side;
+    FIX::OrdType ordType = m_ordType;
+    std::string symbol = m_symbol;
+    std::string currency = m_currency; // 货币: USD
+    std::string securityExchange = m_securityExchange; // 取值范围：SSE | ZSSE | HKEX | SGX | US | USOTC
+    FIX::TimeInForce timeInForce = m_timeInForce;
+    FIX::OrderQty orderQty = m_orderQty / 2;
+    FIX::Price price = m_price / 2;
+
+    message.setField(FIX::FIELD::OrigClOrdID, origClOrdID); // 最近修改后的客户订单id，一直在更新，并不是初始的那一个
+    message.setField(FIX::FIELD::ClOrdID, clOrdID);
+    message.setField(FIX::Side(side));
+    message.setField(FIX::OrdType(ordType));
+    message.setField(FIX::FIELD::Symbol, symbol);
+    message.setField(FIX::FIELD::Currency, currency);
+    message.setField(FIX::FIELD::SecurityExchange, securityExchange);
+    message.setField(FIX::TimeInForce(timeInForce));
+    message.setField(FIX::TransactTime());
+
+    // 改单内容：Price、QTY
+    message.setField(FIX::OrderQty(orderQty));
+    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT)
+        message.setField(FIX::Price(price));  // 限价类型要传Price
+    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)
+        message.setField(FIX::Price(price / 2)); // 止损类型要传StopPx
+
+    // 设置公共的静态字段
+    setupStaticFields(message);
+}
+
+void ClientApplication::setupCancelMessage(FIX::Message& message)
+{
+    FIX::OrigClOrdID origClOrdID = m_clOrdID;
+    FIX::ClOrdID clOrdID = queryClOrdID();
+    FIX::Side side = m_side;
+    std::string currency = m_currency; // 货币: USD
+    std::string securityExchange = m_securityExchange; // 取值范围：SSE | ZSSE | HKEX | SGX | US | USOTC
+
+    message.setField(FIX::FIELD::OrigClOrdID, origClOrdID);
+    message.setField(FIX::FIELD::ClOrdID, clOrdID);
+    message.setField(FIX::Side(side));
+    message.setField(FIX::FIELD::Currency, currency);
+    message.setField(FIX::FIELD::SecurityExchange, securityExchange);
+    message.setField(FIX::TransactTime());
 }
 
 // Account <1> field
@@ -409,6 +558,7 @@ std::string ClientApplication::getNewClOrdID()
 // MsgType <35> field
 // OrderQty <38> field
 // OrdType <40> field
+// OrigClOrdID <41> field
 // SenderCompID <49> field
 // SendingTime <52> field
 // Side <54> field
@@ -416,6 +566,7 @@ std::string ClientApplication::getNewClOrdID()
 // TargetCompID <56> field
 // TimeInForce <59> field
 // TransactTime <60> field
+// StopPx <99> field
 // ExDestination <100> field
 // SecurityExchange <207> field
 // CheckSum <10> field
@@ -424,7 +575,7 @@ void ClientApplication::startTestAction()
 {
     std::cout << std::endl
         << "请选择: " << std::endl
-        << "1) New Order" << std::endl
+        << "1) Create Order" << std::endl
         << "2) Modify Order" << std::endl
         << "3) Cancel Order" << std::endl
         << "4) Market data test" << std::endl
@@ -440,7 +591,7 @@ void ClientApplication::startTestAction()
 
     if (action == '1')
         // 创建新订单
-        testNewOrder();
+        testCreateOrder();
     else if (action == '2')
         // 取消已有订单
         testCancelOrder();
@@ -454,93 +605,50 @@ void ClientApplication::startTestAction()
         throw std::exception();
 }
 
-void ClientApplication::setupTestMessage(FIX::Message& message)
+void ClientApplication::testCreateOrder()
 {
-    FIX::Header& header = message.getHeader();
-    header.setField(49, "client1"); // SenderCompID <49> field，
-    header.setField(56, "gateway"); // TargetCompID <56> field，
+    // 设置创建订单所需字段
+    m_side = querySide();
+    m_ordType = queryOrdType();
+    m_timeInForce = queryTimeInForce();
+    m_symbol = querySymbol();
+    m_currency = "USD"; // 货币: USD
+    m_securityExchange = "US"; // 取值范围：SSE | ZSSE | HKEX | SGX | US | USOTC
+    m_price = queryPrice();
+    m_orderQty = queryOrderQty();
 
-    message.setField(20005, "20"); // IB Gateway
-}
+    if (queryConfirm("Send create order"))
+    {
+        FIX50::NewOrderSingle message{};
 
-void ClientApplication::testNewOrder()
-{
-    FIX::OrdType ordType;
-    FIX50::NewOrderSingle message(
-        queryClOrdID(),
-        FIX::Side_BUY,
-        FIX::TransactTime(),
-        ordType = queryOrdType()
-    );
+        // 设置创建订单所需字段
+        setupCreateMessage(message);
 
-    // 设置message公共字段
-    setupTestMessage(message);
-
-    message.setField(1, "1111");   // Account <1> field，
-    message.setField(55, "LMT");   // Symbol <55> field, 股票代码
-    message.setField(100, "0");    // ExDestination <100> field, 固定传"0"，同时还必须设置15或207
-    message.setField(15, "USD");   // Currency <15> field，
-    message.setField(207, "US");   // SecurityExchange <207> field, SSE | ZSSE | HKEX | SGX | US | USOTC
-
-    message.setField(queryOrderQty());
-    message.setField(queryTimeInForce());
-    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
-        message.setField(queryPrice());
-    
-    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
-        message.setField(queryStopPx());
-
-    
-
-    if (queryConfirm("Send enter order"))
         // 将订单发送
         FIX::Session::sendToTarget(message);
+    }
 }
 
 void ClientApplication::testModifyOrder()
 {
-    FIX50::OrderCancelReplaceRequest message(
-        queryOrigClOrdID(),
-        queryClOrdID(),
-        querySide(),
-        FIX::TransactTime(),
-        queryOrdType()
-    );
+    FIX50::OrderCancelReplaceRequest message{};
 
-    // 设置message公共字段
-    setupTestMessage(message);
+    // 设置修改订单所需字段
+    setupModifyMessage(message);
 
-    message.setField(1, "1111");   // Account <1> field，
-    message.setField(55, "LMT");   // Symbol <55> field, 股票代码
-    message.setField(100, "0");    // ExDestination <100> field, 固定传"0"，同时还必须设置15或207
-    message.setField(15, "USD");   // Currency <15> field，
-    message.setField(207, "US");   // SecurityExchange <207> field, SSE | ZSSE | HKEX | SGX | US | USOTC
-
-    if (queryConfirm("New price"))
-        message.setField(queryPrice());
-
-    message.setField(queryOrderQty());
-
-    if (queryConfirm("Send replace order"))
-        // 将订单发送
-        FIX::Session::sendToTarget(message);
+    // 将订单发送
+    FIX::Session::sendToTarget(message);
 }
 
 void ClientApplication::testCancelOrder()
 {
-    FIX50::OrderCancelRequest message(
-        queryOrigClOrdID(),
-        queryClOrdID(),
-        querySide(),
-        FIX::TransactTime()
-    );
+    FIX50::OrderCancelRequest message{};
 
-    // 设置message公共字段
-    setupTestMessage(message);
+    // 设置取消订单所需字段
+    setupCancelMessage(message);
 
-    if (queryConfirm("Send cancel order"))
-        // 将订单发送
-        FIX::Session::sendToTarget(message);
+    // 将订单发送
+    FIX::Session::sendToTarget(message);
 }
 
 void ClientApplication::testMarketDataRequest()
@@ -569,8 +677,7 @@ void ClientApplication::startOptionAction()
         << "1) 联交所港股期权" << std::endl
         << "2) 美股期权" << std::endl
         << "3) 港期所指数期权" << std::endl
-        << "4) 港期所期货" << std::endl
-        << std::endl;
+        << "4) 港期所期货" << std::endl;
 
     char action;
     std::cin >> action;
@@ -616,6 +723,7 @@ void ClientApplication::setupOptionMessage(FIX::Message& message)
 // MsgType <35> field
 // OrderQty <38> field
 // OrdType <40> field
+// OrigClOrdID <41> field
 // SenderCompID <49> field
 // SendingTime <52> field
 // Side <54> field
@@ -623,6 +731,7 @@ void ClientApplication::setupOptionMessage(FIX::Message& message)
 // TargetCompID <56> field
 // TimeInForce <59> field
 // TransactTime <60> field
+// StopPx <99> field
 // ExDestination <100> field
 // SecurityExchange <207> field
 // CheckSum <10> field
@@ -642,10 +751,11 @@ void ClientApplication::testOption1()
     message.setField(FIX::OrderQty(1000));
     message.setField(FIX::TimeInForce(FIX::TimeInForce_DAY));
 
+    FIX::Price price = queryPrice();
     if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
-        message.setField(queryPrice());
+        message.setField(price);
     if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
-        message.setField(queryStopPx());
+        message.setField(FIX::Price(price - 1));
 
     message.setField(167, "OPT"); // SecurityTyp
     message.setField(55, "00700"); // Symbol
@@ -679,10 +789,11 @@ void ClientApplication::testOption2()
     message.setField(FIX::OrderQty(1000));
     message.setField(FIX::TimeInForce(FIX::TimeInForce_DAY));
 
+    FIX::Price price = queryPrice();
     if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
-        message.setField(queryPrice());
+        message.setField(price);
     if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
-        message.setField(queryStopPx());
+        message.setField(FIX::Price(price - 1));
 
     message.setField(167, "OPT"); // SecurityTyp
     message.setField(55, "MSFT"); // Symbol
@@ -715,10 +826,11 @@ void ClientApplication::testOption3()
     message.setField(FIX::OrderQty(1000));
     message.setField(FIX::TimeInForce(FIX::TimeInForce_DAY));
 
+    FIX::Price price = queryPrice();
     if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
-        message.setField(queryPrice());
+        message.setField(price);
     if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
-        message.setField(queryStopPx());
+        message.setField(FIX::Price(price - 1));
 
     message.setField(167, "OPT"); // SecurityTyp
     message.setField(55, "HSI"); // Symbol
@@ -750,10 +862,11 @@ void ClientApplication::testFuture()
     message.setField(FIX::OrderQty(1000));
     message.setField(FIX::TimeInForce(FIX::TimeInForce_DAY));
 
+    FIX::Price price = queryPrice();
     if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
-        message.setField(queryPrice());
+        message.setField(price);
     if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
-        message.setField(queryStopPx());
+        message.setField(FIX::Price(price - 1));
 
     message.setField(167, "FUT"); // SecurityType
     message.setField(55, "HSI"); // Symbol
@@ -771,12 +884,12 @@ void ClientApplication::testFuture()
 
 void ClientApplication::startTestCaseAction()
 {
+#if 0
     std::cout << std::endl
         << "请选择: " << std::endl
         << "1) Buy LMT 1000 @ SMART" << std::endl
         << "2) Modify LMT Order" << std::endl
-        << "3) Cancel LMT Order" << std::endl
-        << std::endl;
+        << "3) Cancel LMT Order" << std::endl;
 
     char action;
     std::cin >> action;
@@ -787,37 +900,26 @@ void ClientApplication::startTestCaseAction()
     }
 
     if (action == '1')
-        testCaseAction1();
+        testCaseActionCreate();
     else if (action == '2')
-        testCaseAction2();
+        testCaseActionModify();
     else if (action == '3')
-        testCaseAction3();
+        testCaseActionCancel();
     else
         throw std::exception();
+#else
+    // 获取输入流，截取参数
+    // 动态字段
+    m_side = querySide();
+    m_ordType = queryOrdType();
+    m_timeInForce = queryTimeInForce(); // 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+    m_symbol = querySymbol();
+    m_currency = queryCurrency();
+    m_securityExchange = querySecurityExchange();
+    m_price = queryPrice();
+    m_orderQty = queryOrderQty();
+#endif
 }
-
-// 设置公共的静态字段
-void ClientApplication::setupTestCaseMessage(FIX::Message& message)
-{
-    FIX::Header& header = message.getHeader();
-    header.setField(FIX::FIELD::SenderCompID, "client1"); // SenderCompID <49> field，
-    header.setField(FIX::FIELD::TargetCompID, "gateway"); // TargetCompID <56> field，
-
-    message.setField(20005, "20"); // IB Gateway
-    message.setField(FIX::FIELD::ExDestination, "0"); // 智能路由，固定传"0"，同时还必须设置Currency(15) 或者 SecurityExchange(207)
-    message.setField(FIX::FIELD::Currency, "USD");
-    message.setField(FIX::FIELD::SecurityExchange, "US"); // 取值范围：SSE | ZSSE | HKEX | SGX | US | USOTC
-}
-
-// Repeat above steps for the different Time In Force (DAY,GTC,GTD,GTT,GAT,FOK,AON,IOC,MOO,MOC,LOC,LOO)
-// TimeInForce: "0"~"9"
-//
-// Repeat above steps for the different Order Types such as (STP + STP LMT)
-// OrderType: "1"~"4"
-// case '1': return FIX::OrdType(FIX::OrdType_MARKET); 
-// case '2': return FIX::OrdType(FIX::OrdType_LIMIT);
-// case '3': return FIX::OrdType(FIX::OrdType_STOP);
-// case '4': return FIX::OrdType(FIX::OrdType_STOP_LIMIT);
 
 // Account <1> field
 // BeginString <8> field
@@ -829,6 +931,7 @@ void ClientApplication::setupTestCaseMessage(FIX::Message& message)
 // MsgType <35> field
 // OrderQty <38> field
 // OrdType <40> field
+// OrigClOrdID <41> field
 // SenderCompID <49> field
 // SendingTime <52> field
 // Side <54> field
@@ -841,213 +944,35 @@ void ClientApplication::setupTestCaseMessage(FIX::Message& message)
 // SecurityExchange <207> field
 // CheckSum <10> field
 //
-void ClientApplication::testCaseAction1()
+void ClientApplication::testCaseActionCreate()
 {
-    // 动态字段
-    FIX::ClOrdID clOrdID = getNewClOrdID();
-    m_side = FIX::Side_BUY;
-    m_ordType = FIX::OrdType_MARKET;
-    m_timeInForce = FIX::TimeInForce_DAY;
-    m_symbol = "LMT";
-    m_account = "12345678";
-
-    FIX::OrderQty orderQty = 1000;
-    FIX::Price price = 1000;
-    FIX::StopPx stopPx = 499;
-    
     FIX50::NewOrderSingle message{};
 
-    setupTestCaseMessage(message); // 设置公共的静态字段
-    message.setField(FIX::FIELD::ClOrdID, clOrdID);
-    message.setField(FIX::FIELD::Account, m_account);
-    message.setField(FIX::FIELD::Side, m_side);
-    message.setField(FIX::FIELD::Symbol, m_symbol);
-    message.setField(FIX::TransactTime());
-
-    // 测试内容
-    message.setField(FIX::TimeInForce(m_timeInForce));
-    message.setField(FIX::OrdType(m_ordType));
-
-    message.setField(FIX::OrderQty(orderQty));
-    if (m_ordType == FIX::OrdType_LIMIT || m_ordType == FIX::OrdType_STOP_LIMIT)
-        message.setField(FIX::Price(price));  // 限价类型要传Price
-    if (m_ordType == FIX::OrdType_STOP || m_ordType == FIX::OrdType_STOP_LIMIT)
-        message.setField(FIX::StopPx(stopPx)); // 止损类型要传StopPx
+    // 设置创建订单所需字段
+    setupCreateMessage(message);
 
     // 将订单发送
     FIX::Session::sendToTarget(message);
 }
 
-void ClientApplication::testCaseAction2()
+void ClientApplication::testCaseActionModify()
 {
-    // 动态字段
-    FIX::ClOrdID clOrdID = getNewClOrdID();
-    FIX::OrigClOrdID origClOrdID = m_clOrdID;
-
-    FIX::OrderQty orderQty = 900;
-    FIX::Price price = 90;
-    FIX::StopPx stopPx = 49;
-
     FIX50::OrderCancelReplaceRequest message{};
 
-    setupTestCaseMessage(message); // 设置公共的静态字段
-    message.setField(FIX::FIELD::OrigClOrdID, origClOrdID);
-    message.setField(FIX::FIELD::ClOrdID, clOrdID);
-    message.setField(FIX::FIELD::Account, m_account);
-    message.setField(FIX::FIELD::Side, m_side);
-    message.setField(FIX::FIELD::Symbol, m_symbol);
-    message.setField(FIX::TransactTime());
-    
-    // 测试内容
-    message.setField(FIX::TimeInForce(m_timeInForce)); // 改单时如果不带，IB会改为默认：当天订单
-    message.setField(FIX::OrdType(m_ordType));
-
-    message.setField(FIX::OrderQty(orderQty));
-    if (m_ordType == FIX::OrdType_LIMIT || m_ordType == FIX::OrdType_STOP_LIMIT)
-        message.setField(FIX::Price(price));  // 限价类型要传Price
-    if (m_ordType == FIX::OrdType_STOP || m_ordType == FIX::OrdType_STOP_LIMIT)
-        message.setField(FIX::StopPx(stopPx)); // 止损类型要传StopPx
+    // 设置修改订单所需字段
+    setupModifyMessage(message);
 
     // 将订单发送
     FIX::Session::sendToTarget(message);
 }
 
-void ClientApplication::testCaseAction3()
+void ClientApplication::testCaseActionCancel()
 {
-    // 动态字段
-    FIX::ClOrdID clOrdID = getNewClOrdID();
-    FIX::OrigClOrdID origClOrdID = m_clOrdID;
-
     FIX50::OrderCancelRequest message{};
-
-    setupTestCaseMessage(message); // 设置公共的静态字段
-    message.setField(FIX::FIELD::OrigClOrdID, origClOrdID);
-    message.setField(FIX::FIELD::ClOrdID, clOrdID);
-    message.setField(FIX::FIELD::Account, m_account);
-    message.setField(FIX::FIELD::Side, m_side);
-    message.setField(FIX::TransactTime());
+    
+    // 设置取消订单所需字段
+    setupCancelMessage(message);
 
     // 将订单发送
     FIX::Session::sendToTarget(message);
-}
-
-bool ClientApplication::implExecutionReport(const FIX::Message& message)
-{
-    FIX42::ExecutionReport msg{};
-    if (message.isSetField(FIX::FIELD::ClOrdID))
-    {
-        m_clOrdID = message.getField(FIX::FIELD::ClOrdID);
-        msg.setField(FIX::FIELD::ClOrdID, m_clOrdID);
-    }
-
-    if (message.isSetField(FIX::FIELD::OrigClOrdID))
-    {
-        msg.setField(message.getFieldRef(FIX::FIELD::OrigClOrdID));
-    }
-
-    // 根据IB文档, 如果下单时没有填写账户, 那么拒绝(35=8,39=8)的消息中, 不会携带账户.
-    if (message.isSetField(FIX::FIELD::Account))
-    {
-        m_account = message.getField(FIX::FIELD::Account);
-    }
-
-    // 根据IB文档, 当field 207填写错误的时候, 返回错误消息:Invalid destination exchange specified
-    // 此时35=8,39=8的消息不携带54. 故需要判断.
-    if (message.isSetField(FIX::FIELD::OrdType))
-    {
-        std::string ordType = message.getField(FIX::FIELD::OrdType);
-        m_ordType = ordType.empty() ? NULL : ordType[0];
-    }
-
-    if (message.isSetField(FIX::FIELD::OrderID))
-    {
-        msg.setField(message.getFieldRef(FIX::FIELD::OrderID));
-    }
-
-    if (message.isSetField(FIX::FIELD::ExecID))
-    {
-        msg.setField(message.getFieldRef(FIX::FIELD::ExecID));
-    }
-
-    if (message.isSetField(FIX::FIELD::CumQty))
-    {
-        msg.setField(message.getFieldRef(FIX::FIELD::CumQty));
-    }
-
-    if (message.isSetField(FIX::FIELD::LeavesQty))
-    {
-        msg.setField(message.getFieldRef(FIX::FIELD::LeavesQty));
-    }
-
-    if (message.isSetField(FIX::FIELD::OrdStatus))
-    {
-        msg.setField(message.getFieldRef(FIX::FIELD::OrdStatus));
-    }
-
-    if (message.isSetField(FIX::FIELD::ExecType))
-    {
-        msg.setField(message.getFieldRef(FIX::FIELD::ExecType));
-    }
-
-    // 根据IB文档, 当field 207填写错误的时候, 返回错误消息:Invalid destination exchange specified
-    // 此时35=8,39=8的消息不携带54. 故需要判断, 且最好修改IBFIX42.xml.
-    if (message.isSetField(FIX::FIELD::Side))
-    {
-        m_side = message.getField(FIX::FIELD::Side);
-        msg.setField(FIX::FIELD::Side, m_side);
-    }
-
-    // 实际测试时发现, 当MaturityMonthYear格式不是YYYYMM时, 将返回:Invalid value in field # 205(MaturityDay).
-    // 此时35=8,39=8的消息不携带55.
-    if (message.isSetField(FIX::FIELD::Symbol))
-    {
-        m_symbol = message.getField(FIX::FIELD::Symbol);
-        msg.setField(FIX::FIELD::Symbol, m_symbol);
-    }
-
-    if (message.isSetField(FIX::FIELD::OrderQty))
-    {
-        msg.setField(message.getFieldRef(FIX::FIELD::OrderQty));
-    }
-
-    if (message.isSetField(FIX::FIELD::TransactTime))
-    {
-        msg.setField(message.getFieldRef(FIX::FIELD::TransactTime));
-    }
-
-    if (msg.isSetField(FIX::FIELD::Price))
-    {
-        msg.setField(message.getFieldRef(FIX::FIELD::Price));
-    }
-
-    if (msg.isSetField(FIX::FIELD::ExecRefID))
-    {
-        msg.setField(message.getFieldRef(FIX::FIELD::ExecRefID));
-    }
-
-    if (msg.isSetField(FIX::FIELD::LastPx))
-    {
-        msg.setField(message.getFieldRef(FIX::FIELD::LastPx));
-    }
-
-    if (msg.isSetField(FIX::FIELD::LastQty))
-    {
-        msg.setField(message.getFieldRef(FIX::FIELD::LastQty));
-    }
-
-    if (msg.isSetField(FIX::FIELD::TrdMatchID))
-    {
-        msg.setField(message.getFieldRef(FIX::FIELD::TrdMatchID));
-    }
-    return true;
-}
-
-void ClientApplication::implOrderCancelReject(const FIX::Message& message) const
-{
-
-}
-
-void ClientApplication::implBusinessMessageReject(const FIX::Message& message) const
-{
-
 }

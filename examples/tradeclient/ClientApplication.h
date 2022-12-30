@@ -44,30 +44,34 @@ private:
     void onMessage(const FIX42::ExecutionReport&, const FIX::SessionID&);
     void onMessage(const FIX42::OrderCancelReject&, const FIX::SessionID&);
 
+    // 处理消息返回
+    bool implExecutionReport(const FIX::Message& message);
+    void implOrderCancelReject(const FIX::Message& message) const;
+    void implBusinessMessageReject(const FIX::Message& message) const;
+
     // 输入信息的一些方法
     int queryVersion();
-    bool queryConfirm(const std::string& query);
-    FIX::SenderCompID querySenderCompID();
-    FIX::TargetCompID queryTargetCompID();
-    FIX::TargetSubID queryTargetSubID();
     FIX::ClOrdID queryClOrdID();
-    FIX::OrigClOrdID queryOrigClOrdID();
-    FIX::Symbol querySymbol();
     FIX::Side querySide();
-    FIX::OrderQty queryOrderQty();
     FIX::OrdType queryOrdType();
-    FIX::Price queryPrice();
-    FIX::StopPx queryStopPx();
     FIX::TimeInForce queryTimeInForce();
-
-    // 工具
+    FIX::Symbol querySymbol();
+    FIX::Currency queryCurrency();
+    FIX::SecurityExchange querySecurityExchange();
+    FIX::Price queryPrice();
+    FIX::OrderQty queryOrderQty();
+    bool queryConfirm(const std::string& query);
     void printLog(std::string log);
-    std::string getNewClOrdID();
+
+    // 设置消息动态字段
+    void setupStaticFields(FIX::Message& message);
+    void setupCreateMessage(FIX::Message& message);
+    void setupModifyMessage(FIX::Message& message);
+    void setupCancelMessage(FIX::Message& message);
 
     // 测试下单，FIX50
     void startTestAction();
-    void setupTestMessage(FIX::Message& message);
-    void testNewOrder();
+    void testCreateOrder();
     void testModifyOrder();
     void testCancelOrder();
     void testMarketDataRequest();
@@ -82,30 +86,29 @@ private:
 
     // 执行测试用例，FIX50
     void startTestCaseAction();
-    void setupTestCaseMessage(FIX::Message& message);
-    void testCaseAction1();
-    void testCaseAction2();
-    void testCaseAction3();
-
-    // 工具方法
-    bool implExecutionReport(const FIX::Message& message);
-    void implOrderCancelReject(const FIX::Message& message) const;
-    void implBusinessMessageReject(const FIX::Message& message) const;
+    void testCaseActionCreate();
+    void testCaseActionModify();
+    void testCaseActionCancel();
 
 private:
     char m_action{ NULL };
 
     // 数据变量
-    std::string m_side;
-    FIX::OrdType m_ordType;
-    FIX::TimeInForce m_timeInForce;
-    std::string m_account{};
-    std::string m_symbol{};
+    FIX::Side m_side{ NULL };
+    FIX::OrdType m_ordType{ NULL };
+    std::string m_symbol{ NULL };
+    std::string m_exDestination{ "0" }; // 默认：智能路由，传"0"
+    std::string m_currency{ NULL };
+    std::string m_securityExchange{ NULL };
+    FIX::TimeInForce m_timeInForce{ NULL };
+    FIX::Price m_price{ 0.0 };
+    FIX::OrderQty m_orderQty{ 0.0 };
 
-    // 生成订单号
-    std::string m_prefix{};
+    // 账号相关
+    std::string m_account{ NULL };
+    std::string m_prefix{ NULL };
     int m_count{ 0 };
-    std::string m_clOrdID{};
+    std::string m_clOrdID{ NULL };
     
 };
 
