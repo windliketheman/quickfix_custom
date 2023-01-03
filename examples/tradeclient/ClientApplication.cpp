@@ -6,10 +6,114 @@
 #include "quickfix/Session.h"
 #include <iostream>
 #include <chrono>
+#include <boost/algorithm/string.hpp>
 #include "ClientApplication.h"
+// #include "Assert.h"
+// #include "Base/DataCopy.h"
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <map>
+#include <algorithm>
+#include <vector>
 
-// 1: 下单测试，2：期权测试，3：执行测试用例
-#define STSRT_ACTION '3'
+// 1: 执行测试用例，2：期权测试
+#define STSRT_ACTION '1'
+
+namespace
+{
+    //using ArgMap = std::map<std::string, std::string>;
+    //bool parserCommandArgs(const base::Arguments& args, ArgMap* v)
+    //{
+    //    BASE_ASSERT(nullptr != v);
+    //    std::string key{};
+    //    std::string value{};
+    //    for (std::size_t i = 1; i < args.size(); i++)
+    //    {
+    //        auto pos = args[i].find_first_of('=');
+    //        if (pos == args[i].npos)
+    //        {
+    //            key = args[i];
+    //            (*v)[key] = "";
+    //        }
+    //        else
+    //        {
+    //            key.assign(args[i].c_str(), pos);
+    //            value.assign(args[i].c_str() + pos + 1);
+    //            (*v)[key] = value;
+    //        }
+    //    }
+    //    return true;
+    //}
+
+    size_t find(const std::string& line, std::vector<std::string> vect, int pos = 0)
+    {
+        int eol1;
+        eol1 = 0;
+        for (std::vector<std::string>::iterator iter = vect.begin(); iter != vect.end(); ++iter)
+        {
+            //std::cout << *iter << std::endl;
+            int eol2 = line.find(*iter, pos);
+            if (eol1 == 0 && eol2 > 0)
+                eol1 = eol2;
+            else if (eol2 > 0 && eol2 < eol1)
+                eol1 = eol2;
+        }
+        return eol1;
+    }
+
+    std::map<std::string, std::string> parseString(std::string const& str, char delim = '=')
+    {
+        std::map<std::string, std::string> result;
+
+        std::string::size_type key_pos = 0, i, j;
+        std::string::size_type key_end;
+        std::string::size_type val_pos;
+        std::string::size_type lim_pos;
+        std::string::size_type val_end;
+
+        while ((key_end = str.find(delim, key_pos)) != std::string::npos)
+        {
+            if ((val_pos = str.find_first_not_of(delim, key_end + 1)) == std::string::npos) break;
+            while (key_end - 1 > 0 && (str[key_end - 1] <= 32 || str[key_end - 1] == ';'))
+                key_end--;
+            while (val_pos < str.size() && (str[val_pos] <= 32 || str[val_pos] == ';'))
+                val_pos++;
+            val_end = str.find('\n', val_pos);
+            i = str.find('\"', val_pos);
+            if (i != std::string::npos)
+                j = str.find('\"', i + 1);
+            else
+                j = 0;
+            lim_pos = find(str.substr(0, i), { " ", ";", "\t" }, val_pos + 1);
+            // std::cout << "s.substr(j):" << s.substr(j) << std::endl;
+            if (lim_pos == 0 && j != std::string::npos) lim_pos = find(str.substr(j), { " ", ";", "\t" }) + j;
+            if (lim_pos < val_pos) lim_pos = val_pos + 1;
+            if (j > 0) val_end = j + 1;
+            if (val_end > lim_pos) val_end = lim_pos;
+            result.emplace(str.substr(key_pos, key_end - key_pos), str.substr(val_pos, val_end - val_pos));
+            key_pos = val_end;
+            while ((key_pos < str.size() && str[key_pos] <= 32 || str[key_pos] == ';'))
+                ++key_pos;
+            if (val_end == 0) break;
+        }
+        return result;
+    }
+
+    bool startsWith(const std::string& str, const std::string& prefix)
+    {
+        return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
+    }
+
+    bool endsWith(std::string const& str, std::string const& suffix)
+    {
+        if (str.length() < suffix.length())
+        {
+            return false;
+        }
+        return str.compare(str.length() - suffix.length(), suffix.length(), suffix) == 0;
+    }
+}
 
 void ClientApplication::onCreate(const FIX::SessionID& sessionID)
 {
@@ -211,6 +315,7 @@ void ClientApplication::implBusinessMessageReject(const FIX::Message& message) c
 {
 }
 
+// ClientApplication::ClientApplication(const Context& ctx) : m_ctx(ctx)
 ClientApplication::ClientApplication()
 {
     m_account = "12345678";
@@ -221,6 +326,10 @@ ClientApplication::ClientApplication()
     char buf[32]{};
     std::sprintf(buf, "%02d%02d%02d%02d%02d", now->tm_mon + 1, now->tm_mday, now->tm_hour, now->tm_min, now->tm_sec);
     m_prefix = buf;
+}
+
+ClientApplication::~ClientApplication()
+{
 }
 
 void ClientApplication::run()
@@ -238,10 +347,9 @@ void ClientApplication::run()
 #elif
                 std::cout << std::endl
                     << "请选择: " << std::endl
-                    << "1) 手动下单" << std::endl
+                    << "1) 执行测试用例" << std::endl
                     << "2) 测试期权" << std::endl
-                    << "3) 执行测试用例" << std::endl
-                    << "4) 退出" << std::endl;
+                    << "3) 退出" << std::endl;
 
                 std::cin >> action;
                 m_action = action;
@@ -255,15 +363,12 @@ void ClientApplication::run()
             }
 
             if (action == '1')
-                // 开始测试
-                startTestAction();
+                // 开始执行测试用例
+                startTestCaseAction();
             else if (action == '2')
                 // 开始期权测试
                 startOptionAction();
             else if (action == '3')
-                // 开始执行测试用例
-                startTestCaseAction();
-            else if (action == '4')
                 // 退出，结束程序
                 break;
         }
@@ -306,132 +411,238 @@ int ClientApplication::queryVersion()
     }
 }
 
-FIX::ClOrdID ClientApplication::queryClOrdID()
+std::string ClientApplication::queryClOrdID()
 {
     return m_prefix + std::to_string(++m_count);
 }
 
-FIX::Side ClientApplication::querySide()
+//std::string ClientApplication::querySide()
+//{
+//    std::cout << std::endl
+//        << "1) Buy" << std::endl
+//        << "2) Sell" << std::endl
+//        << "3) Sell Short" << std::endl
+//        << "4) Sell Short Exempt" << std::endl
+//        << "5) Cross" << std::endl
+//        << "6) Cross Short" << std::endl
+//        << "7) Cross Short Exempt" << std::endl
+//        << "Side: " << std::endl;
+//
+//    char value;
+//    std::cin >> value;
+//    switch (value)
+//    {
+//    case '1': return FIX::Side(FIX::Side_BUY);
+//    case '2': return FIX::Side(FIX::Side_SELL);
+//    case '3': return FIX::Side(FIX::Side_SELL_SHORT);
+//    case '4': return FIX::Side(FIX::Side_SELL_SHORT_EXEMPT);
+//    case '5': return FIX::Side(FIX::Side_CROSS);
+//    case '6': return FIX::Side(FIX::Side_CROSS_SHORT);
+//    case '7': return FIX::Side('A');
+//    default: throw std::exception();
+//    }
+//}
+//
+//std::string ClientApplication::queryOrdType()
+//{
+//    std::cout << std::endl
+//        << "1) Market" << std::endl
+//        << "2) Limit" << std::endl
+//        << "3) Stop" << std::endl
+//        << "4) Stop Limit" << std::endl
+//        << "OrdType: " << std::endl;
+//
+//    char value;
+//    std::cin >> value;
+//    switch (value)
+//    {
+//    case '1': return FIX::OrdType(FIX::OrdType_MARKET);
+//    case '2': return FIX::OrdType(FIX::OrdType_LIMIT);
+//    case '3': return FIX::OrdType(FIX::OrdType_STOP);
+//    case '4': return FIX::OrdType(FIX::OrdType_STOP_LIMIT);
+//    default: throw std::exception();
+//    }
+//}
+//
+//std::string ClientApplication::queryTimeInForce()
+//{
+//    std::cout << std::endl
+//        << "0) DAY" << std::endl
+//        << "1) GTC" << std::endl
+//        << "2) OPG" << std::endl
+//        << "3) IOC" << std::endl
+//        << "4) FOK" << std::endl
+//        << "5) GTX" << std::endl
+//        << "6) GTD" << std::endl
+//        << "7) ATC" << std::endl
+//        << "8) AUC" << std::endl
+//        << "TimeInForce: " << std::endl;
+//
+//    char value;
+//    std::cin >> value;
+//    switch (value)
+//    {
+//    case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8':
+//        return FIX::TimeInForce(value);
+//    default: throw std::exception();
+//    }
+//}
+//
+//std::string ClientApplication::querySymbol()
+//{
+//    std::cout << std::endl
+//        << "Symbol: " << std::endl;
+//
+//    std::string value;
+//    std::cin >> value;
+//    return FIX::Symbol(value);
+//}
+//
+//std::string ClientApplication::queryCurrency()
+//{
+//    std::cout << std::endl
+//        << "Currency: " << std::endl;
+//
+//    std::string value;
+//    std::cin >> value;
+//    return FIX::Currency(value);
+//}
+//
+//std::string ClientApplication::querySecurityExchange()
+//{
+//    std::cout << std::endl
+//        << "Exchange: " << std::endl;
+//
+//    std::string value;
+//    std::cin >> value;
+//    return FIX::SecurityExchange(value);
+//}
+//
+//std::string ClientApplication::queryPrice()
+//{
+//    std::cout << std::endl
+//        << "Price: " << std::endl;
+//
+//    std::string value;
+//    std::cin >> value;
+//    return value;
+//}
+//
+//std::string ClientApplication::queryOrderQty()
+//{
+//    std::cout << std::endl
+//        << "OrderQty: " << std::endl;
+//
+//    std::string value;
+//    std::cin >> value;
+//    return value;
+//}
+
+std::string ClientApplication::queryCommands()
 {
     std::cout << std::endl
-        << "1) Buy" << std::endl
-        << "2) Sell" << std::endl
-        << "3) Sell Short" << std::endl
-        << "4) Sell Short Exempt" << std::endl
-        << "5) Cross" << std::endl
-        << "6) Cross Short" << std::endl
-        << "7) Cross Short Exempt" << std::endl
-        << "Side: " << std::endl;
-
-    char value;
-    std::cin >> value;
-    switch (value)
-    {
-    case '1': return FIX::Side(FIX::Side_BUY);
-    case '2': return FIX::Side(FIX::Side_SELL);
-    case '3': return FIX::Side(FIX::Side_SELL_SHORT);
-    case '4': return FIX::Side(FIX::Side_SELL_SHORT_EXEMPT);
-    case '5': return FIX::Side(FIX::Side_CROSS);
-    case '6': return FIX::Side(FIX::Side_CROSS_SHORT);
-    case '7': return FIX::Side('A');
-    default: throw std::exception();
-    }
-}
-
-FIX::OrdType ClientApplication::queryOrdType()
-{
-    std::cout << std::endl
-        << "1) Market" << std::endl
-        << "2) Limit" << std::endl
-        << "3) Stop" << std::endl
-        << "4) Stop Limit" << std::endl
-        << "OrdType: " << std::endl;
-
-    char value;
-    std::cin >> value;
-    switch (value)
-    {
-    case '1': return FIX::OrdType(FIX::OrdType_MARKET);
-    case '2': return FIX::OrdType(FIX::OrdType_LIMIT);
-    case '3': return FIX::OrdType(FIX::OrdType_STOP);
-    case '4': return FIX::OrdType(FIX::OrdType_STOP_LIMIT);
-    default: throw std::exception();
-    }
-}
-
-FIX::TimeInForce ClientApplication::queryTimeInForce()
-{
-    std::cout << std::endl
-        << "0) DAY" << std::endl
-        << "1) GTC" << std::endl
-        << "2) OPG" << std::endl
-        << "3) IOC" << std::endl
-        << "4) FOK" << std::endl
-        << "5) GTX" << std::endl
-        << "6) GTD" << std::endl
-        << "7) ATC" << std::endl
-        << "8) AUC" << std::endl
-        << "TimeInForce: " << std::endl;
-
-    char value;
-    std::cin >> value;
-    switch (value)
-    {
-    case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8':
-        return FIX::TimeInForce(value);
-    default: throw std::exception();
-    }
-}
-
-FIX::Symbol ClientApplication::querySymbol()
-{
-    std::cout << std::endl
-        << "Symbol: " << std::endl;
+        << "cmd(c、m、d)=; 1(side)=; 2(ordType)=; 3(timeInForce)=; 4(symbol)=; 5(currency)=; 6(securityExchang)=; 7(price)=; 8(orderQty)=;" << std::endl;
 
     std::string value;
     std::cin >> value;
-    return FIX::Symbol(value);
+
+    /*
+    "File=\"c:\\dir\\ocean\\\nCCS_test.txt\"\n
+    iEcho=10000; iHrShift=0 rho_Co2 = 1.15d0;\n
+    Liner=01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"
+    */
+    std::string str = value;
+    if (startsWith(str, "\"") && endsWith(str, "\""))
+    {
+        str = str.substr(1, str.length() - 2);
+    }
+    return str;
 }
 
-FIX::Currency ClientApplication::queryCurrency()
+std::map<std::string, std::string> ClientApplication::parseCommands(std::string str)
 {
-    std::cout << std::endl
-        << "Currency: " << std::endl;
-
-    std::string value;
-    std::cin >> value;
-    return FIX::Currency(value);
+    std::map<std::string, std::string> commands = parseString(str);
+    for (auto iter = commands.begin(); iter != commands.end(); ++iter) {
+        if (iter->first == "1" || boost::iequals(iter->first, "side"))
+        {
+            if (iter->second == "-")
+            {
+                m_side = "";
+                continue;
+            }
+            m_side = iter->second;
+        }
+        else if (iter->first == "2" || boost::iequals(iter->first, "ordType"))
+        {
+            if (iter->second == "-")
+            {
+                m_ordType = "";
+                continue;
+            }
+            m_ordType = iter->second;
+        }
+        else if (iter->first == "3" || boost::iequals(iter->first, "timeInForce"))
+        {
+            if (iter->second == "-")
+            {
+                m_timeInForce = "";
+                continue;
+            }
+            m_timeInForce = iter->second;
+        }
+        else if (iter->first == "4" || boost::iequals(iter->first, "symbol"))
+        {
+            if (iter->second == "-")
+            {
+                m_symbol = "";
+                continue;
+            }
+            m_symbol = iter->second;
+        }
+        else if (iter->first == "5" || boost::iequals(iter->first, "currency"))
+        {
+            if (iter->second == "-")
+            {
+                m_currency = "";
+                continue;
+            }
+            m_currency = iter->second;
+        }
+        else if (iter->first == "6" || boost::iequals(iter->first, "securityExchang"))
+        {
+            if (iter->second == "-")
+            {
+                m_securityExchange = "";
+                continue;
+            }
+            m_securityExchange = iter->second;
+        }
+        else if (iter->first == "7" || boost::iequals(iter->first, "price"))
+        {
+            if (iter->second == "-")
+            {
+                m_price = "";
+                continue;
+            }
+            m_price = iter->second;
+        }
+        else if (iter->first == "8" || boost::iequals(iter->first, "orderQty"))
+        {
+            if (iter->second == "-")
+            {
+                m_orderQty = "";
+                continue;
+            }
+            m_orderQty = iter->second;
+        }
+        else
+        {
+            continue;
+        }
+    }
+    return commands;
 }
 
-FIX::SecurityExchange ClientApplication::querySecurityExchange()
-{
-    std::cout << std::endl
-        << "Exchange: " << std::endl;
-
-    std::string value;
-    std::cin >> value;
-    return FIX::SecurityExchange(value);
-}
-
-FIX::Price ClientApplication::queryPrice()
-{
-    std::cout << std::endl
-        << "Price: " << std::endl;
-
-    double value;
-    std::cin >> value;
-    return FIX::Price(value);
-}
-
-FIX::OrderQty ClientApplication::queryOrderQty()
-{
-    std::cout << std::endl
-        << "OrderQty: " << std::endl;
-
-    long value;
-    std::cin >> value;
-    return FIX::OrderQty(value);
-}
 
 bool ClientApplication::queryConfirm(const std::string& query)
 {
@@ -466,33 +677,52 @@ void ClientApplication::setupStaticFields(FIX::Message& message)
 
 void ClientApplication::setupCreateMessage(FIX::Message& message)
 {
-    FIX::ClOrdID clOrdID = queryClOrdID();
-    FIX::Side side = m_side;
-    FIX::OrdType ordType = m_ordType;
+    std::string clOrdID = queryClOrdID();
+    if (!clOrdID.empty())
+        message.setField(FIX::FIELD::ClOrdID, clOrdID);
+
+    std::string side = m_side;
+    if (!side.empty())
+        message.setField(FIX::FIELD::Side, side);
+
+    std::string ordType = m_ordType;
+    if (!ordType.empty())
+        message.setField(FIX::FIELD::OrdType, ordType);
+
     std::string symbol = m_symbol;
+    if (!symbol.empty())
+        message.setField(FIX::FIELD::Symbol, symbol);
+
     std::string exDestination = m_exDestination;
+    if (!exDestination.empty())
+        message.setField(FIX::FIELD::ExDestination, exDestination); // 智能路由，固定传"0"，同时还必须设置Currency(15) 或者 SecurityExchange(207)
+
     std::string currency = m_currency;
+    if (!currency.empty())
+        message.setField(FIX::FIELD::Currency, currency);
+
     std::string securityExchange = m_securityExchange; // 取值范围：SSE | ZSSE | HKEX | SGX | US | USOTC
-    FIX::TimeInForce timeInForce = m_timeInForce;
-    FIX::OrderQty orderQty = m_orderQty;
-    FIX::Price price = m_price;
+    if (!securityExchange.empty())
+        message.setField(FIX::FIELD::SecurityExchange, securityExchange);
 
-    message.setField(FIX::FIELD::ClOrdID, clOrdID);
-    message.setField(FIX::Side(side));
-    message.setField(FIX::OrdType(ordType));
-    message.setField(FIX::FIELD::Symbol, symbol);
-    message.setField(FIX::FIELD::ExDestination, exDestination); // 智能路由，固定传"0"，同时还必须设置Currency(15) 或者 SecurityExchange(207)
-    message.setField(FIX::FIELD::Currency, currency);
-    message.setField(FIX::FIELD::SecurityExchange, securityExchange);
-    message.setField(FIX::TimeInForce(timeInForce));
+    std::string timeInForce = m_timeInForce;
+    if (!timeInForce.empty())
+        message.setField(FIX::FIELD::TimeInForce, timeInForce);
+
+    FIX::OrderQty orderQty = std::stof(m_orderQty);
+    if (orderQty > 0)
+        message.setField(FIX::OrderQty(orderQty));
+
+    FIX::Price price = std::stof(m_price);
+    if (price > 0)
+    {
+        if (ordType.compare("2") || ordType.compare("4")) // OrdType_LIMIT、OrdType_STOP_LIMIT
+            message.setField(FIX::Price(price));  // 限价类型要传Price
+        if (ordType.compare("3") || ordType.compare("4")) // OrdType_STOP、OrdType_STOP_LIMIT
+            message.setField(FIX::StopPx(price / 2)); // 止损类型要传StopPx
+    }
+
     message.setField(FIX::TransactTime());
-
-    // 改单内容：Price、QTY
-    message.setField(FIX::OrderQty(orderQty));
-    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT)
-        message.setField(FIX::Price(price));  // 限价类型要传Price
-    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)
-        message.setField(FIX::Price(price / 2)); // 止损类型要传StopPx
 
     // 设置公共的静态字段
     setupStaticFields(message);
@@ -500,33 +730,52 @@ void ClientApplication::setupCreateMessage(FIX::Message& message)
 
 void ClientApplication::setupModifyMessage(FIX::Message& message)
 {
-    FIX::OrigClOrdID origClOrdID = m_clOrdID;
-    FIX::ClOrdID clOrdID = queryClOrdID();
-    FIX::Side side = m_side;
-    FIX::OrdType ordType = m_ordType;
+    std::string origClOrdID = m_clOrdID;
+    if (!origClOrdID.empty())
+        message.setField(FIX::FIELD::OrigClOrdID, origClOrdID); // 最近修改后的客户订单id，一直在更新，并不是初始的那一个
+
+    std::string clOrdID = queryClOrdID();
+    if (!clOrdID.empty())
+        message.setField(FIX::FIELD::ClOrdID, clOrdID);
+
+    std::string side = m_side;
+    if (!side.empty())
+        message.setField(FIX::FIELD::Side, side);
+
+    std::string ordType = m_ordType;
+    if (!ordType.empty())
+        message.setField(FIX::FIELD::OrdType, ordType);
+
     std::string symbol = m_symbol;
+    if (!symbol.empty())
+        message.setField(FIX::FIELD::Symbol, symbol);
+
     std::string currency = m_currency; // 货币: USD
+    if (!currency.empty())
+        message.setField(FIX::FIELD::Currency, currency);
+
     std::string securityExchange = m_securityExchange; // 取值范围：SSE | ZSSE | HKEX | SGX | US | USOTC
-    FIX::TimeInForce timeInForce = m_timeInForce;
-    FIX::OrderQty orderQty = m_orderQty / 2;
-    FIX::Price price = m_price / 2;
+    if (!securityExchange.empty())
+        message.setField(FIX::FIELD::SecurityExchange, securityExchange);
 
-    message.setField(FIX::FIELD::OrigClOrdID, origClOrdID); // 最近修改后的客户订单id，一直在更新，并不是初始的那一个
-    message.setField(FIX::FIELD::ClOrdID, clOrdID);
-    message.setField(FIX::Side(side));
-    message.setField(FIX::OrdType(ordType));
-    message.setField(FIX::FIELD::Symbol, symbol);
-    message.setField(FIX::FIELD::Currency, currency);
-    message.setField(FIX::FIELD::SecurityExchange, securityExchange);
-    message.setField(FIX::TimeInForce(timeInForce));
+    std::string timeInForce = m_timeInForce;
+    if (!timeInForce.empty())
+        message.setField(FIX::FIELD::TimeInForce, timeInForce);
+
+    FIX::OrderQty orderQty = std::stof(m_orderQty);
+    if (orderQty > 0)
+        message.setField(FIX::OrderQty(orderQty));
+
+    FIX::Price price = std::stof(m_price);
+    if (price > 0)
+    {
+        if (ordType.compare("2") || ordType.compare("4")) // OrdType_LIMIT、OrdType_STOP_LIMIT
+            message.setField(FIX::Price(price));  // 限价类型要传Price
+        if (ordType.compare("3") || ordType.compare("4")) // OrdType_STOP、OrdType_STOP_LIMIT
+            message.setField(FIX::StopPx(price / 2)); // 止损类型要传StopPx
+    }
+
     message.setField(FIX::TransactTime());
-
-    // 改单内容：Price、QTY
-    message.setField(FIX::OrderQty(orderQty));
-    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT)
-        message.setField(FIX::Price(price));  // 限价类型要传Price
-    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)
-        message.setField(FIX::Price(price / 2)); // 止损类型要传StopPx
 
     // 设置公共的静态字段
     setupStaticFields(message);
@@ -534,140 +783,27 @@ void ClientApplication::setupModifyMessage(FIX::Message& message)
 
 void ClientApplication::setupCancelMessage(FIX::Message& message)
 {
-    FIX::OrigClOrdID origClOrdID = m_clOrdID;
-    FIX::ClOrdID clOrdID = queryClOrdID();
-    FIX::Side side = m_side;
+    std::string origClOrdID = m_clOrdID;
+    if (!origClOrdID.empty())
+        message.setField(FIX::FIELD::OrigClOrdID, origClOrdID);
+
+    std::string clOrdID = queryClOrdID();
+    if (!clOrdID.empty())
+        message.setField(FIX::FIELD::ClOrdID, clOrdID);
+
+    std::string side = m_side;
+    if (!side.empty())
+        message.setField(FIX::FIELD::Side, side);
+
     std::string currency = m_currency; // 货币: USD
+    if (!currency.empty())
+        message.setField(FIX::FIELD::Currency, currency);
+
     std::string securityExchange = m_securityExchange; // 取值范围：SSE | ZSSE | HKEX | SGX | US | USOTC
-
-    message.setField(FIX::FIELD::OrigClOrdID, origClOrdID);
-    message.setField(FIX::FIELD::ClOrdID, clOrdID);
-    message.setField(FIX::Side(side));
-    message.setField(FIX::FIELD::Currency, currency);
-    message.setField(FIX::FIELD::SecurityExchange, securityExchange);
+    if (!securityExchange.empty())
+        message.setField(FIX::FIELD::SecurityExchange, securityExchange);
+    
     message.setField(FIX::TransactTime());
-}
-
-// Account <1> field
-// BeginString <8> field
-// BodyLength <9> field
-// ClOrdID <11> field
-// Currency <15> field
-// HandlInst <21> field
-// MsgSeqNum <34> field
-// MsgType <35> field
-// OrderQty <38> field
-// OrdType <40> field
-// OrigClOrdID <41> field
-// SenderCompID <49> field
-// SendingTime <52> field
-// Side <54> field
-// Symbol <55> field
-// TargetCompID <56> field
-// TimeInForce <59> field
-// TransactTime <60> field
-// StopPx <99> field
-// ExDestination <100> field
-// SecurityExchange <207> field
-// CheckSum <10> field
-//
-void ClientApplication::startTestAction()
-{
-    std::cout << std::endl
-        << "请选择: " << std::endl
-        << "1) Create Order" << std::endl
-        << "2) Modify Order" << std::endl
-        << "3) Cancel Order" << std::endl
-        << "4) Market data test" << std::endl
-        << std::endl;
-
-    char action;
-    std::cin >> action;
-    switch (action)
-    {
-        case '1': case '2': case '3': case '4': case '5': break;
-        default: throw std::exception();
-    }
-
-    if (action == '1')
-        // 创建新订单
-        testCreateOrder();
-    else if (action == '2')
-        // 取消已有订单
-        testCancelOrder();
-    else if (action == '3')
-        // 修改已有订单
-        testModifyOrder();
-    else if (action == '4')
-        // 注意：查询订单，业务上用不到
-        testMarketDataRequest();
-    else
-        throw std::exception();
-}
-
-void ClientApplication::testCreateOrder()
-{
-    // 设置创建订单所需字段
-    m_side = querySide();
-    m_ordType = queryOrdType();
-    m_timeInForce = queryTimeInForce();
-    m_symbol = querySymbol();
-    m_currency = "USD"; // 货币: USD
-    m_securityExchange = "US"; // 取值范围：SSE | ZSSE | HKEX | SGX | US | USOTC
-    m_price = queryPrice();
-    m_orderQty = queryOrderQty();
-
-    if (queryConfirm("Send create order"))
-    {
-        FIX50::NewOrderSingle message{};
-
-        // 设置创建订单所需字段
-        setupCreateMessage(message);
-
-        // 将订单发送
-        FIX::Session::sendToTarget(message);
-    }
-}
-
-void ClientApplication::testModifyOrder()
-{
-    FIX50::OrderCancelReplaceRequest message{};
-
-    // 设置修改订单所需字段
-    setupModifyMessage(message);
-
-    // 将订单发送
-    FIX::Session::sendToTarget(message);
-}
-
-void ClientApplication::testCancelOrder()
-{
-    FIX50::OrderCancelRequest message{};
-
-    // 设置取消订单所需字段
-    setupCancelMessage(message);
-
-    // 将订单发送
-    FIX::Session::sendToTarget(message);
-}
-
-void ClientApplication::testMarketDataRequest()
-{
-    FIX::Message message;
-
-    // 手动输入Fix版本，现在用不到了，直接用FIX50
-    int version = queryVersion();
-    switch (version)
-    {
-        case 42:
-            // 注意：查询订单，业务上用不到，所以Fix42也没有示例
-            std::cerr << "No test for version " << version << std::endl;
-        default:
-            std::cerr << "No test for version " << version << std::endl;
-            break;
-    }
-
-    FIX::Session::sendToTarget(message);
 }
 
 void ClientApplication::startOptionAction()
@@ -683,8 +819,8 @@ void ClientApplication::startOptionAction()
     std::cin >> action;
     switch (action)
     {
-        case '1': case '2': case '3': case '4': case '5': break;
-        default: throw std::exception();
+    case '1': case '2': case '3': case '4': case '5': break;
+    default: throw std::exception();
     }
 
     if (action == '1')
@@ -699,225 +835,202 @@ void ClientApplication::startOptionAction()
         throw std::exception();
 }
 
-void ClientApplication::setupOptionMessage(FIX::Message& message)
-{
-    FIX::Header& header = message.getHeader();
-    header.setField(49, "client1"); // SenderCompID <49> field，
-    header.setField(56, "gateway"); // TargetCompID <56> field，
-
-    message.setField(20005, "20"); // IB Gateway
-    message.setField(1, "1111");   // Account <1> field，
-    message.setField(55, "LMT");   // Symbol <55> field, 股票代码
-    message.setField(100, "0");    // ExDestination <100> field, 固定传"0"，同时还必须设置15或207
-    message.setField(15, "USD");   // Currency <15> field，
-    message.setField(207, "US");   // SecurityExchange <207> field, SSE | ZSSE | HKEX | SGX | US | USOTC
-}
-
-// Account <1> field
-// BeginString <8> field
-// BodyLength <9> field
-// ClOrdID <11> field
-// Currency <15> field
-// HandlInst <21> field
-// MsgSeqNum <34> field
-// MsgType <35> field
-// OrderQty <38> field
-// OrdType <40> field
-// OrigClOrdID <41> field
-// SenderCompID <49> field
-// SendingTime <52> field
-// Side <54> field
-// Symbol <55> field
-// TargetCompID <56> field
-// TimeInForce <59> field
-// TransactTime <60> field
-// StopPx <99> field
-// ExDestination <100> field
-// SecurityExchange <207> field
-// CheckSum <10> field
-//
+// 1) 联交所港股期权
 void ClientApplication::testOption1()
 {
-    FIX::OrdType ordType;
-    FIX50::NewOrderSingle message(
-        queryClOrdID(),
-        FIX::Side_BUY,
-        FIX::TransactTime(),
-        ordType = queryOrdType()
-    );
+    m_side = "1"; // 1~9
+    m_ordType = "2"; // 1~5 B J LT P TSL
+    m_timeInForce = "0"; // 0~8(0 = Day)
+    m_symbol = "00700";
+    m_currency = "HKD";
+    m_securityExchange = "HKEX";
+    m_price = "1000";
+    m_orderQty = "1000";
 
-    // 设置message公共字段
-    setupOptionMessage(message);
-    message.setField(FIX::OrderQty(1000));
-    message.setField(FIX::TimeInForce(FIX::TimeInForce_DAY));
+    FIX50::NewOrderSingle message{};
 
-    FIX::Price price = queryPrice();
-    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
-        message.setField(price);
-    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
-        message.setField(FIX::Price(price - 1));
+    // 设置创建订单所需字段
+    setupCreateMessage(message);
 
     message.setField(167, "OPT"); // SecurityTyp
-    message.setField(55, "00700"); // Symbol
-    message.setField(207, "HKEX"); // SecurityExchange
     message.setField(200, "202212"); // MaturityMonthYear
     message.setField(205, "29"); // MaturityDay
     message.setField(202, "140"); // strikePrice
     message.setField(201, "1"); // PutOrCall
 
-    message.setField(15, "HKD");
-
-    
-    if (queryConfirm("创建订单，发送"))
-        // 将订单发送
-        FIX::Session::sendToTarget(message);
+    // 将订单发送
+    FIX::Session::sendToTarget(message);
 }
 
-// 测试期权2
+// 2) 美股期权
 void ClientApplication::testOption2()
 {
-    FIX::OrdType ordType;
-    FIX50::NewOrderSingle message(
-        queryClOrdID(),
-        FIX::Side_BUY,
-        FIX::TransactTime(),
-        ordType = queryOrdType()
-    );
+    m_side = "1"; // 1~9
+    m_ordType = "2"; // 1~5 B J LT P TSL
+    m_timeInForce = "0"; // 0~8(0 = Day)
+    m_symbol = "MSFT";
+    m_currency = "USD";
+    m_securityExchange = "";
+    m_price = "1000";
+    m_orderQty = "1000";
 
-    // 设置message公共字段
-    setupOptionMessage(message);
-    message.setField(FIX::OrderQty(1000));
-    message.setField(FIX::TimeInForce(FIX::TimeInForce_DAY));
+    FIX50::NewOrderSingle message{};
 
-    FIX::Price price = queryPrice();
-    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
-        message.setField(price);
-    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
-        message.setField(FIX::Price(price - 1));
+    // 设置创建订单所需字段
+    setupCreateMessage(message);
 
     message.setField(167, "OPT"); // SecurityTyp
-    message.setField(55, "MSFT"); // Symbol
-    // message.setField(207, "SEHK"); // SecurityExchange
-    message.setField(15, "USD"); // Currency
     message.setField(200, "202301"); // MaturityMonthYear
     message.setField(205, "6"); // MaturityDay
     message.setField(202, "310"); // strikePrice
     message.setField(201, "1"); // PutOrCall
 
-
-    if (queryConfirm("创建订单，发送"))
-        // 将订单发送
-        FIX::Session::sendToTarget(message);
+    // 将订单发送
+    FIX::Session::sendToTarget(message);
 }
 
-// 测试期权3
+// 3) 港期所指数期权
 void ClientApplication::testOption3()
 {
-    FIX::OrdType ordType;
-    FIX50::NewOrderSingle message(
-        queryClOrdID(),
-        FIX::Side_BUY,
-        FIX::TransactTime(),
-        ordType = queryOrdType()
-    );
+    m_side = "1"; // 1~9
+    m_ordType = "2"; // 1~5 B J LT P TSL
+    m_timeInForce = "0"; // 0~8(0 = Day)
+    m_symbol = "HSI";
+    m_currency = "HKD";
+    m_securityExchange = "HKEX";
+    m_price = "1000";
+    m_orderQty = "1000";
 
-    // 设置message公共字段
-    setupOptionMessage(message);
-    message.setField(FIX::OrderQty(1000));
-    message.setField(FIX::TimeInForce(FIX::TimeInForce_DAY));
+    FIX50::NewOrderSingle message{};
 
-    FIX::Price price = queryPrice();
-    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
-        message.setField(price);
-    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
-        message.setField(FIX::Price(price - 1));
+    // 设置创建订单所需字段
+    setupCreateMessage(message);
 
     message.setField(167, "OPT"); // SecurityTyp
-    message.setField(55, "HSI"); // Symbol
-    message.setField(207, "HKEX"); // SecurityExchange
     message.setField(200, "202212"); // MaturityMonthYear
     message.setField(205, "29"); // MaturityDay
     message.setField(202, "19000"); // strikePrice
     message.setField(201, "1"); // PutOrCall
 
-
-    if (queryConfirm("创建订单，发送"))
-        // 将订单发送
-        FIX::Session::sendToTarget(message);
+    // 将订单发送
+    FIX::Session::sendToTarget(message);
 }
 
-// 测试期货
+// 4) 港期所期货
 void ClientApplication::testFuture()
 {
-    FIX::OrdType ordType;
-    FIX50::NewOrderSingle message(
-        queryClOrdID(),
-        FIX::Side_BUY,
-        FIX::TransactTime(),
-        ordType = queryOrdType()
-    );
+    m_side = "1"; // 1~9
+    m_ordType = "2"; // 1~5 B J LT P TSL
+    m_timeInForce = "0"; // 0~8(0 = Day)
+    m_symbol = "HSI";
+    m_currency = "HKD";
+    m_securityExchange = "HKEX";
+    m_price = "1000";
+    m_orderQty = "1000";
 
-    // 设置message公共字段
-    setupOptionMessage(message);
-    message.setField(FIX::OrderQty(1000));
-    message.setField(FIX::TimeInForce(FIX::TimeInForce_DAY));
+    FIX50::NewOrderSingle message{};
 
-    FIX::Price price = queryPrice();
-    if (ordType == FIX::OrdType_LIMIT || ordType == FIX::OrdType_STOP_LIMIT) // 限价单或止损限价单
-        message.setField(price);
-    if (ordType == FIX::OrdType_STOP || ordType == FIX::OrdType_STOP_LIMIT)  // 又止损限价单？
-        message.setField(FIX::Price(price - 1));
+    // 设置创建订单所需字段
+    setupCreateMessage(message);
 
-    message.setField(167, "FUT"); // SecurityType
-    message.setField(55, "HSI"); // Symbol
-    message.setField(207, "HKEX"); // SecurityExchange
+    message.setField(167, "FUT"); // SecurityTyp
     message.setField(200, "202212"); // MaturityMonthYear
-    // message.setField(205, ""); // MaturityDay
-    // message.setField(202, ""); // strikePrice
-    // message.setField(201, ""); // PutOrCall
 
-
-    if (queryConfirm("创建订单，发送"))
-        // 将订单发送
-        FIX::Session::sendToTarget(message);
+    // 将订单发送
+    FIX::Session::sendToTarget(message);
 }
 
 void ClientApplication::startTestCaseAction()
 {
-#if 0
-    std::cout << std::endl
-        << "请选择: " << std::endl
-        << "1) Buy LMT 1000 @ SMART" << std::endl
-        << "2) Modify LMT Order" << std::endl
-        << "3) Cancel LMT Order" << std::endl;
-
-    char action;
-    std::cin >> action;
-    switch (action)
-    { 
-        case '1': case '2': case '3': case '4': case '5': break;
-        default: throw std::exception();
+#if 1
+    static int times = 0;
+    if (++times == 1)
+    {
+        // 第一个循环，提示命令格式，后续不再提示
+        std::cout << std::endl
+            << "命令格式如下：" << std::endl
+            << "cmd(c、m、d)=; 1(side)=; 2(ordType)=; 3(timeInForce)=; 4(symbol)=; 5(currency)=; 6(securityExchang)=; 7(price)=; 8(orderQty)=;" << std::endl
+            << std::endl;
     }
 
-    if (action == '1')
-        testCaseActionCreate();
-    else if (action == '2')
-        testCaseActionModify();
-    else if (action == '3')
-        testCaseActionCancel();
-    else
-        throw std::exception();
+    std::cout << std::endl
+        << "请输入新命令： " << std::endl;
+
+    std::string value;
+    std::cin >> value;
+    std::string str = value;
+    if (startsWith(str, "\"") && endsWith(str, "\""))
+    {
+        str = str.substr(1, str.length() - 2);
+    }
+
+    // 解析命令，并修改成员变量，用作请求消息参数
+    std::map<std::string, std::string> commands = parseCommands(str);
+
+    // map判断有某个key
+    if (commands.find("cmd") != commands.end())
+    {
+        std::map<std::string, std::string>::iterator iter = commands.find("cmd");
+        std::string cmd = iter->second;
+        if (boost::iequals(cmd, "c"))
+        {
+            // 创建订单
+            sendCreateOrder();
+        }
+        else if (boost::iequals(cmd, "m"))
+        {
+            // 修改订单
+            sendModifyOrder();
+        }
+        else if (boost::iequals(cmd, "d"))
+        {
+            // 取消订单
+            sendCancelOrder();
+        }
+        else
+        {
+            // 未知
+            return;
+        }
+    }
+
 #else
-    // 获取输入流，截取参数
-    // 动态字段
-    m_side = querySide();
-    m_ordType = queryOrdType();
-    m_timeInForce = queryTimeInForce(); // 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-    m_symbol = querySymbol();
-    m_currency = queryCurrency();
-    m_securityExchange = querySecurityExchange();
-    m_price = queryPrice();
-    m_orderQty = queryOrderQty();
+    //m_console << "欢迎使用\n";
+
+    //Args args;
+    //while (true)
+    //{
+    //    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    //    m_console << "->";
+    //    args.clear();
+    //    if (!m_console.readCommand(&args)) continue;
+    //    const auto& cmd = args[0];
+
+    //    if ("" == cmd) continue;
+    //    else if ("exit" == cmd) break;
+    //    else if ("help" == cmd)
+    //    {
+    //        for (const auto& pair : m_commands)
+    //        {
+    //            m_console << "命令:" << pair.first << ", 说明:" << pair.second.m_desc << '\n';
+    //        }
+    //    }
+    //    else
+    //    {
+    //        auto iter = m_commands.find(cmd);
+    //        if (iter == m_commands.cend())
+    //        {
+    //            m_console.system(cmd);
+    //        }
+    //        else
+    //        {
+    //            (this->*(iter->second.m_pFun))(args);
+    //        }
+    //    }
+    //}
+
+    //m_console << "程序退出\n";
+    //return;
 #endif
 }
 
@@ -944,7 +1057,7 @@ void ClientApplication::startTestCaseAction()
 // SecurityExchange <207> field
 // CheckSum <10> field
 //
-void ClientApplication::testCaseActionCreate()
+void ClientApplication::sendCreateOrder()
 {
     FIX50::NewOrderSingle message{};
 
@@ -955,7 +1068,7 @@ void ClientApplication::testCaseActionCreate()
     FIX::Session::sendToTarget(message);
 }
 
-void ClientApplication::testCaseActionModify()
+void ClientApplication::sendModifyOrder()
 {
     FIX50::OrderCancelReplaceRequest message{};
 
@@ -966,7 +1079,7 @@ void ClientApplication::testCaseActionModify()
     FIX::Session::sendToTarget(message);
 }
 
-void ClientApplication::testCaseActionCancel()
+void ClientApplication::sendCancelOrder()
 {
     FIX50::OrderCancelRequest message{};
     

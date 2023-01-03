@@ -21,12 +21,24 @@
 
 #include <queue>
 
+// For Command
+// #include "Base/Macros.h"
+// #include "Base/Command.h"
+// #include "Base/Console.h"
+
+// class Context;
+
 class ClientApplication :
     public FIX::Application,
     public FIX::MessageCracker
 {
 public:
+    // using CommandMap = std::unordered_map < std::string, base::Command<ClientApplication> >;
+
+    // explicit ClientApplication(const Context& ctx);
     ClientApplication();
+    ~ClientApplication();
+
     void run();
 
 private:
@@ -51,15 +63,9 @@ private:
 
     // 输入信息的一些方法
     int queryVersion();
-    FIX::ClOrdID queryClOrdID();
-    FIX::Side querySide();
-    FIX::OrdType queryOrdType();
-    FIX::TimeInForce queryTimeInForce();
-    FIX::Symbol querySymbol();
-    FIX::Currency queryCurrency();
-    FIX::SecurityExchange querySecurityExchange();
-    FIX::Price queryPrice();
-    FIX::OrderQty queryOrderQty();
+    std::string queryClOrdID();
+    std::string queryCommands();
+    std::map<std::string, std::string> parseCommands(std::string str);
     bool queryConfirm(const std::string& query);
     void printLog(std::string log);
 
@@ -69,16 +75,8 @@ private:
     void setupModifyMessage(FIX::Message& message);
     void setupCancelMessage(FIX::Message& message);
 
-    // 测试下单，FIX50
-    void startTestAction();
-    void testCreateOrder();
-    void testModifyOrder();
-    void testCancelOrder();
-    void testMarketDataRequest();
-
     // 测试期权，FIX50
     void startOptionAction();
-    void setupOptionMessage(FIX::Message& message);
     void testOption1();
     void testOption2();
     void testOption3();
@@ -86,29 +84,34 @@ private:
 
     // 执行测试用例，FIX50
     void startTestCaseAction();
-    void testCaseActionCreate();
-    void testCaseActionModify();
-    void testCaseActionCancel();
+    void sendCreateOrder();
+    void sendModifyOrder();
+    void sendCancelOrder();
 
 private:
+    // using Args = base::Arguments;
+    // const Context& m_ctx;
+    // const static CommandMap m_commands;
+    // base::Console m_console{};
+    
     char m_action{ NULL };
 
     // 数据变量
-    FIX::Side m_side{ NULL };
-    FIX::OrdType m_ordType{ NULL };
-    std::string m_symbol{ NULL };
     std::string m_exDestination{ "0" }; // 默认：智能路由，传"0"
-    std::string m_currency{ NULL };
-    std::string m_securityExchange{ NULL };
-    FIX::TimeInForce m_timeInForce{ NULL };
-    FIX::Price m_price{ 0.0 };
-    FIX::OrderQty m_orderQty{ 0.0 };
+    std::string m_side{ "" };
+    std::string m_ordType{ "" };
+    std::string m_timeInForce{ "" };
+    std::string m_symbol{ "" };
+    std::string m_currency{ "" };
+    std::string m_securityExchange{ "" };
+    std::string m_price{ "" };
+    std::string m_orderQty{ "" };
 
     // 账号相关
-    std::string m_account{ NULL };
-    std::string m_prefix{ NULL };
+    std::string m_account{ "" };
+    std::string m_prefix{ "" };
     int m_count{ 0 };
-    std::string m_clOrdID{ NULL };
+    std::string m_clOrdID{ "" };
     
 };
 
