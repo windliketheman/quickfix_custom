@@ -65,7 +65,6 @@ private:
     int queryVersion();
     std::string queryClOrdID();
     std::string queryCommands();
-    std::map<std::string, std::string> parseCommands(std::string str);
     bool queryConfirm(const std::string& query);
     void printLog(std::string log);
 
@@ -84,9 +83,12 @@ private:
 
     // 执行测试用例，FIX50
     void startTestCaseAction();
+    void sendCreateOrder(std::map<std::string, std::string>* params);
+    void sendModifyOrder(std::map<std::string, std::string>* params);
     void sendCreateOrder();
     void sendModifyOrder();
     void sendCancelOrder();
+    void resetData();
 
 private:
     // using Args = base::Arguments;
@@ -106,6 +108,11 @@ private:
     std::string m_securityExchange{ "" };
     std::string m_price{ "" };
     std::string m_orderQty{ "" };
+    std::string m_securityType{ "" };
+    std::string m_maturityMonthYear{ "" };
+    std::string m_maturityDay{ "" };
+    std::string m_strikePrice{ "" };
+    std::string m_putOrCall{ "" };
 
     // 账号相关
     std::string m_account{ "" };

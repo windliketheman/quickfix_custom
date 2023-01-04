@@ -1,0 +1,153 @@
+美股
+i f=1 sde=1 oty=2 odq=1000 pri=85 tif=0
+i f=1 sym=CSCO sde=1 oty=2 odq=1000 pri=85
+m odq=1100 pri=86
+
+美期权
+i f=2 sde=1 oty=2 odq=1000 pri=85 may=202301 mad=6 stp=137 poc=0
+m odq=1100 pri=86
+
+美期货 没有权限
+i f=3 sde=1 oty=2 odq=1000 pri=85 may=202303
+i f=3 exg=CBOT sym=YM sde=1 oty=2 odq=1000 pri=85 may=202303
+m odq=1100 pri=86
+
+美期货期权 没有权限
+i f=4 sde=1 oty=2 odq=1000 pri=85 may=202303 stp=3720 poc=0
+m odq=1100 pri=86
+
+美差价合约 没有反应
+i f=5 sde=1 oty=2 odq=1000 pri=85
+m odq=1100 pri=86
+
+债券
+i f=6 sde=1 oty=2 odq=1000 pri=85
+m odq=1100 pri=86
+
+外汇
+i f=7 sde=1 oty=2 odq=1000 pri=85
+m odq=1100 pri=86
+
+现货
+i f=9 sde=1 oty=1 odq=1000
+
+场外基金
+i f=10 sde=1 oty=1 coq=1002.23
+
+############################################################### time in force
+
+股票GTC
+i f=1 sde=1 oty=2 odq=1000 pri=85 tif=1
+
+股票GTD
+i f=1 sde=1 oty=2 odq=1000 pri=85 tif=6 exd=20230115
+
+股票FOK(股票实际不支持)
+i f=1 sde=1 oty=2 odq=1000 pri=85 tif=4
+
+股票IOC
+i f=1 sde=1 oty=2 odq=1000 pri=85 tif=3
+
+股票MOO
+i f=1 sde=1 oty=1 odq=1000 tif=2
+
+股票LOO
+i f=1 sde=1 oty=2 odq=1000 pri=85 tif=2
+
+#股票MOC(IB虽然支持7,但是实际上遵守FIX4.2,通过OrderType来实现)
+#i f=1 sde=1 oty=1 odq=1000 tif=7
+
+#股票LOC(IB虽然支持7,但是实际上遵守FIX4.2,通过OrderType来实现)
+#i f=1 sde=1 oty=2 odq=1000 pri=85 tif=7
+
+############################################################### order type
+
+股票Stop单
+i f=1 sde=1 oty=3 odq=1000 stx=85
+m stx=86
+
+股票StopLimit单
+i f=1 sde=1 oty=4 odq=1000 stx=95 pri=85
+m stx=96
+
+股票Market On Close
+i f=1 sde=1 oty=5 odq=1000
+
+股票Limit On Close
+i f=1 sde=1 oty=B odq=1000 pri=85
+
+股票Market If Touched
+i f=1 sde=1 oty=J odq=1000
+
+股票Pegged(Primary Peg)
+i f=1 sde=2 oty=P odq=1000 pri=85 eit=R pdf=0.05
+
+股票Pegged(Market Peg)
+i f=1 sde=1 oty=P odq=1000
+
+股票Pegged(Midpoint Peg)
+i f=1 sde=1 oty=P odq=1000
+
+#股票Pegged(Peg To Best尊嘉不测试, 需要8032字段)
+#
+
+#股票Pegged(Peg To Benchmark尊嘉不测试, 需要更多字段)
+#
+
+股票Pegged(Trailing Stop,尽量通过Method2测试,便于区分)
+i f=1 sde=1 oty=P odq=1000 eit=a pdf=5 tau=100
+
+#股票Trailing Stop Limit(尊嘉不测试)
+#i f=1 sde=1 oty=TSL odq=1000 pri=85
+
+#股票Barrier / Adjustable Stop Orders(尊嘉不测试)
+#
+
+#股票隐藏单(尊嘉不测试,仅用于ISLAND ECN)
+#i f=1 sde=1 oty=2 odq=1000 pri=85 tif=0
+
+#股票冰山单
+i f=1 sde=1 oty=2 odq=1000 pri=85 mfl=50
+
+#股票VWAP
+i f=1 sde=1 oty=2 odq=1000 pri=85 edt=VWAP
+
+#股票Discretionary Orders(尊嘉不测试)
+#
+
+#股票One Cancel All Orders(尊嘉不测试)
+#
+
+#股票Auto Stop / Bracket Orders(尊嘉不测试)
+#
+
+#股票Price Improvement Auction Orders(尊嘉不测试)
+
+#股票Pegged to Stock (Delta) Orders(尊嘉不测试)
+
+#股票Conditional Orders(尊嘉不测试)
+
+#股票ISE Facilitation Orders(尊嘉不测试)
+
+#股票Pair Trades(尊嘉不测试)
+
+#股票Snap to Market Orders(尊嘉不测试)
+
+#股票Snap to Midpoint Orders(尊嘉不测试)
+
+#股票Option Exercise Request(尊嘉不测试)
+
+#股票Limit If Touched (尊嘉不测试)
+#i f=1 sde=1 oty=LT odq=1000 pri=85
+
+#股票MidPrice(尊嘉不测试)
+#i f=1 sde=1 oty=MIDPX odq=1000 pri=85
+
+#股票ATS to Smart(尊嘉不测试)
+#i f=1 sde=1 oty=MIDPX odq=1000 pri=85
+
+#股票算法(尊嘉不测试)
+#i f=1 sde=1 oty=MIDPX odq=1000 pri=85
+
+#股票算法(尊嘉不测试)
+#i f=1 sde=1 oty=MIDPX odq=1000 pri=85
