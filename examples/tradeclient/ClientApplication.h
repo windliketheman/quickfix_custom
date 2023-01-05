@@ -89,8 +89,8 @@ private:
     std::string m_ordType{ "" };
     std::string m_timeInForce{ "" };
     std::string m_symbol{ "" };
-    std::string m_currency{ "" };
-    std::string m_securityExchange{ "" };
+    std::string m_currency{ "USD" };
+    std::string m_securityExchange{ "US" };
     std::string m_price{ "" };
     std::string m_orderQty{ "" };
     std::string m_securityType{ "" };

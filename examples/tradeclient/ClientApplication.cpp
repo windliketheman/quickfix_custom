@@ -246,6 +246,18 @@ bool ClientApplication::implExecutionReport(const FIX::Message& message)
         msg.setField(message.getFieldRef(FIX::FIELD::Symbol));
     }
 
+    if (message.isSetField(FIX::FIELD::SecurityExchange))
+    {
+        m_securityExchange = message.getField(FIX::FIELD::SecurityExchange);
+        msg.setField(message.getFieldRef(FIX::FIELD::SecurityExchange));
+    }
+
+    if (message.isSetField(FIX::FIELD::Currency))
+    {
+        m_currency = message.getField(FIX::FIELD::Currency);
+        msg.setField(message.getFieldRef(FIX::FIELD::Currency));
+    }
+
     if (message.isSetField(FIX::FIELD::OrderQty))
     {
         m_orderQty = message.getField(FIX::FIELD::OrderQty);
@@ -588,12 +600,16 @@ void ClientApplication::printLog(std::string log)
 
 void ClientApplication::setupStaticFields(FIX::Message& message)
 {
+    // SenderCompID、TargetCompID应该放在header里，否则发送消息时本地会报错“Session Not Found”
     FIX::Header& header = message.getHeader();
     header.setField(FIX::FIELD::SenderCompID, "client1"); // SenderCompID <49> field，
     header.setField(FIX::FIELD::TargetCompID, "gateway"); // TargetCompID <56> field，
 
     message.setField(20005, "20");                        // IB Gateway
     message.setField(FIX::FIELD::Account, m_account);     // 终端账号，CLientDemo和OrderService通信可以随意取
+    // message.setField(FIX::FIELD::HandlInst, "1");
+    message.setField(FIX::FIELD::SecurityExchange, "US"); // 必带参数
+    message.setField(FIX::FIELD::Currency, "USD");        // 必带参数
 }
 
 void ClientApplication::setupCreateMessage(FIX::Message& message)
