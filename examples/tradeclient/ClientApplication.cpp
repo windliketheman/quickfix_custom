@@ -588,10 +588,12 @@ void ClientApplication::printLog(std::string log)
 
 void ClientApplication::setupStaticFields(FIX::Message& message)
 {
-    message.setField(FIX::FIELD::SenderCompID, "client1"); // SenderCompID <49> field，
-    message.setField(FIX::FIELD::TargetCompID, "gateway"); // TargetCompID <56> field，
-    message.setField(20005, "20");                         // IB Gateway
-    message.setField(FIX::FIELD::Account, m_account);      // 终端账号，CLientDemo和OrderService通信可以随意取
+    FIX::Header& header = message.getHeader();
+    header.setField(FIX::FIELD::SenderCompID, "client1"); // SenderCompID <49> field，
+    header.setField(FIX::FIELD::TargetCompID, "gateway"); // TargetCompID <56> field，
+
+    message.setField(20005, "20");                        // IB Gateway
+    message.setField(FIX::FIELD::Account, m_account);     // 终端账号，CLientDemo和OrderService通信可以随意取
 }
 
 void ClientApplication::setupCreateMessage(FIX::Message& message)
