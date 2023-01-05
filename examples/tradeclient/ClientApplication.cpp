@@ -8,9 +8,6 @@
 #include <chrono>
 #include <boost/algorithm/string.hpp>
 #include "ClientApplication.h"
-// #include "Assert.h"
-// #include "Base/DataCopy.h"
-#include <iostream>
 #include <string>
 #include <sstream>
 #include <map>
@@ -22,30 +19,6 @@
 
 namespace
 {
-    //using ArgMap = std::map<std::string, std::string>;
-    //bool parserCommandArgs(const base::Arguments& args, ArgMap* v)
-    //{
-    //    BASE_ASSERT(nullptr != v);
-    //    std::string key{};
-    //    std::string value{};
-    //    for (std::size_t i = 1; i < args.size(); i++)
-    //    {
-    //        auto pos = args[i].find_first_of('=');
-    //        if (pos == args[i].npos)
-    //        {
-    //            key = args[i];
-    //            (*v)[key] = "";
-    //        }
-    //        else
-    //        {
-    //            key.assign(args[i].c_str(), pos);
-    //            value.assign(args[i].c_str() + pos + 1);
-    //            (*v)[key] = value;
-    //        }
-    //    }
-    //    return true;
-    //}
-
     size_t find(const std::string& line, std::vector<std::string> vect, int pos = 0)
     {
         int eol1;
@@ -349,7 +322,6 @@ void ClientApplication::implBusinessMessageReject(const FIX::Message& message) c
 {
 }
 
-// ClientApplication::ClientApplication(const Context& ctx) : m_ctx(ctx)
 ClientApplication::ClientApplication()
 {
     m_account = "12345678";
@@ -889,7 +861,6 @@ void ClientApplication::testFuture()
 
 void ClientApplication::startTestCaseAction()
 {
-#if 1
     //static int times = 0;
     //if (++times == 1)
     //{
@@ -901,8 +872,13 @@ void ClientApplication::startTestCaseAction()
     //}
 
     std::cout << std::endl
-        << "请输入参数字符串： " << std::endl;
+        << "请输入测试用例： " << std::endl;
 
+#if 1
+    const int MAX = 1000;
+    char str[MAX];
+    std::cin.getline(str, MAX);
+#else
     std::string value;
     std::cin >> value;
     std::string str = value;
@@ -910,6 +886,7 @@ void ClientApplication::startTestCaseAction()
     {
         str = str.substr(1, str.length() - 2);
     }
+#endif
 
     // 解析命令，并修改成员变量，用作请求消息参数
     std::map<std::string, std::string> params = parseString(str);
@@ -949,70 +926,8 @@ void ClientApplication::startTestCaseAction()
             return;
         }
     }
-
-#else
-    //m_console << "欢迎使用\n";
-
-    //Args args;
-    //while (true)
-    //{
-    //    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    //    m_console << "->";
-    //    args.clear();
-    //    if (!m_console.readCommand(&args)) continue;
-    //    const auto& cmd = args[0];
-
-    //    if ("" == cmd) continue;
-    //    else if ("exit" == cmd) break;
-    //    else if ("help" == cmd)
-    //    {
-    //        for (const auto& pair : m_commands)
-    //        {
-    //            m_console << "命令:" << pair.first << ", 说明:" << pair.second.m_desc << '\n';
-    //        }
-    //    }
-    //    else
-    //    {
-    //        auto iter = m_commands.find(cmd);
-    //        if (iter == m_commands.cend())
-    //        {
-    //            m_console.system(cmd);
-    //        }
-    //        else
-    //        {
-    //            (this->*(iter->second.m_pFun))(args);
-    //        }
-    //    }
-    //}
-
-    //m_console << "程序退出\n";
-    //return;
-#endif
 }
 
-// Account <1> field
-// BeginString <8> field
-// BodyLength <9> field
-// ClOrdID <11> field
-// Currency <15> field
-// HandlInst <21> field
-// MsgSeqNum <34> field
-// MsgType <35> field
-// OrderQty <38> field
-// OrdType <40> field
-// OrigClOrdID <41> field
-// SenderCompID <49> field
-// SendingTime <52> field
-// Side <54> field
-// Symbol <55> field
-// TargetCompID <56> field
-// TimeInForce <59> field
-// TransactTime <60> field
-// StopPx <99> field
-// ExDestination <100> field
-// SecurityExchange <207> field
-// CheckSum <10> field
-//
 void ClientApplication::sendCreateOrder(std::map<std::string, std::string>* params)
 {
     std::string flag{};

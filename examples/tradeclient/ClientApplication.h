@@ -21,21 +21,11 @@
 
 #include <queue>
 
-// For Command
-// #include "Base/Macros.h"
-// #include "Base/Command.h"
-// #include "Base/Console.h"
-
-// class Context;
-
 class ClientApplication :
     public FIX::Application,
     public FIX::MessageCracker
 {
 public:
-    // using CommandMap = std::unordered_map < std::string, base::Command<ClientApplication> >;
-
-    // explicit ClientApplication(const Context& ctx);
     ClientApplication();
     ~ClientApplication();
 
@@ -91,11 +81,6 @@ private:
     void resetData();
 
 private:
-    // using Args = base::Arguments;
-    // const Context& m_ctx;
-    // const static CommandMap m_commands;
-    // base::Console m_console{};
-    
     char m_action{ NULL };
 
     // 数据变量
@@ -121,5 +106,29 @@ private:
     std::string m_clOrdID{ "" };
     
 };
+
+// Account <1> field
+// BeginString <8> field
+// BodyLength <9> field
+// ClOrdID <11> field
+// Currency <15> field
+// HandlInst <21> field
+// MsgSeqNum <34> field
+// MsgType <35> field
+// OrderQty <38> field
+// OrdType <40> field
+// OrigClOrdID <41> field
+// SenderCompID <49> field
+// SendingTime <52> field
+// Side <54> field
+// Symbol <55> field
+// TargetCompID <56> field
+// TimeInForce <59> field
+// TransactTime <60> field
+// StopPx <99> field
+// ExDestination <100> field
+// SecurityExchange <207> field
+// CheckSum <10> field
+//
 
 #endif
