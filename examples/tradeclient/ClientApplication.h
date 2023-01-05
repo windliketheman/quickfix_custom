@@ -74,11 +74,11 @@ private:
     // 执行测试用例，FIX50
     void startTestCaseAction();
     void sendCreateOrder(std::map<std::string, std::string>* params);
+    void sendCreateOrderX(std::map<std::string, std::string>* params);
     void sendModifyOrder(std::map<std::string, std::string>* params);
     void sendCreateOrder();
     void sendModifyOrder();
     void sendCancelOrder();
-    void resetData();
 
 private:
     char m_action{ NULL };
@@ -127,6 +127,7 @@ private:
 // TransactTime <60> field
 // StopPx <99> field
 // ExDestination <100> field
+// CustomerOrFirm <204> field
 // SecurityExchange <207> field
 // CheckSum <10> field
 //

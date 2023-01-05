@@ -893,9 +893,9 @@ void ClientApplication::startTestCaseAction()
         << "请输入测试用例： " << std::endl;
 
 #if 1
-    const int MAX = 1000;
-    char str[MAX];
-    std::cin.getline(str, MAX);
+    const int MAX = 150;
+    char chars[MAX];
+    std::cin.getline(chars, MAX);
 #else
     std::string value;
     std::cin >> value;
@@ -906,6 +906,10 @@ void ClientApplication::startTestCaseAction()
     }
 #endif
 
+    std::string str = chars;
+    // 把字符产全部转换成小写字母。transform()有4个参数，转换字符串起始地址、终止地址、输出到的位置、转换操作
+    transform(str.begin(), str.end(), str.begin(), ::tolower);
+
     // 解析命令，并修改成员变量，用作请求消息参数
     std::map<std::string, std::string> params = parseString(str);
 
@@ -915,9 +919,6 @@ void ClientApplication::startTestCaseAction()
     if (iter != params.end())
     {
         std::string cmd = iter->second;
-
-        // transform()有4个参数，转换字符串起始地址、终止地址、输出到的位置、转换操作
-        transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
         if (boost::iequals(cmd, "i"))
         {
             // 创建订单
@@ -933,10 +934,10 @@ void ClientApplication::startTestCaseAction()
             // 取消订单
             sendCancelOrder();
         }
-        else if (boost::iequals(cmd, "0"))
+        else if (boost::iequals(cmd, "ix"))
         {
-            // 重设数据
-            resetData();
+            // 创建订单
+            sendCreateOrderX(&params);
         }
         else
         {
@@ -1230,6 +1231,7 @@ void ClientApplication::sendCreateOrder(std::map<std::string, std::string>* para
     }
 
     FIX50::NewOrderSingle msg{};
+
     // 设置公共的静态字段
     setupStaticFields(msg);
 
@@ -1322,6 +1324,271 @@ void ClientApplication::sendCreateOrder(std::map<std::string, std::string>* para
     FIX::Session::sendToTarget(msg);
 }
 
+void ClientApplication::sendCreateOrderX(std::map<std::string, std::string>* params)
+{
+    std::string flag{};
+    
+    auto values = *params;
+    if (values.find("f") != values.cend())
+    {
+        flag = values.at("f");
+        if (flag == "0") // 联交所港股
+        {
+            m_symbol = "700"; // 不能有前缀0, 如00700, 否则返回错误:Unknown contract
+            m_securityExchange = "SEHK";
+        }
+        else if (flag == "1") // 股票
+        {
+            m_symbol = "IBM";
+            // m_securityExchange = "NYSE"; 不需要指明交易所.
+            m_currency = "USD";
+        }
+        else if (flag == "2") // 股票期权
+        {
+            m_securityType = FIX::SecurityType_OPTION;
+            m_symbol = "IBM";
+            // m_securityExchange = "CBOE";
+            m_currency = "USD";
+            m_maturityMonthYear = "202301";
+            // 港股期权目前是每个月最多一个, 所以是否带该值都可以.
+            // 如果携带, 则必须匹配个股期权正确的到期日, 否则返回错误:Unknown contract
+            // maturityDay有效值1~31.
+            // maturityDay = "06";是有效代码
+            m_maturityDay = "6";
+            m_strikePrice = "310";
+            m_putOrCall = std::to_string(FIX::PutOrCall_CALL);
+        }
+        else if (flag == "3") // 期货
+        {
+            m_securityType = FIX::SecurityType_FUTURE;
+            m_symbol = "ES";  // ES: 迷你标普500指数期货  YM: 迷你道琼斯工业平均指数期货
+            // 根据IB文档注释, 交易期货的时候, 必须将交易所参数设置到exDestination(100).
+            // 但是在实际测试中, tag100=SMART, 而使用SecurityExchange(207)设置真实交易所, 效果等同.
+            // 无论那种方式, 期货必须使用交易所, 不能依赖Currency指定.
+            m_exDestination = "CME";
+            // m_securityExchange = "CME";  // ES是CME, YM是CBOT
+            m_maturityMonthYear = "202303";
+        }
+        else if (flag == "4") // 期货期权
+        {
+            // 根据IB文档, 期货期权需要ClearingAccount(440), 但是根据附录中的注释, 只有非清算的情况下才需要指定.
+            // 可能期货期权必然会出现交易和清算分离, 才会出现这种问题, 例如IB没有期货清算资格.
+            m_securityType = "FOP"; // 没有找到FOP类型
+            m_symbol = "ES";  // ES: 迷你标普500指数期货  YM: 迷你道琼斯工业平均指数期货
+            m_securityExchange = "CME";  // ES是CME, YM是CBOT
+            // m_currency = "USD"; // 仅使用货币无法下单成功, 必须携带交易所.
+            m_maturityMonthYear = "202303";
+            // 港股期权目前是每个月最多一个, 所以是否带该值都可以.
+            // 如果携带, 则必须匹配个股期权正确的到期日, 否则返回错误:Unknown contract
+            // maturityDay有效值1~31.
+            m_maturityDay = "29";
+            m_strikePrice = "3720";
+            m_putOrCall = std::to_string(FIX::PutOrCall_CALL);
+        }
+        else if (flag == "5") // 差价合约 (以投机为目的的交易产品, 如纸黄金)
+        {
+            m_securityType = "CFD"; // 没有找到CFD类型
+            m_symbol = "VOD";
+            // IB文档没有说明需要指定交易所或货币. 但是实际测试时发现, 如果不携带货币, 会
+            // 返回错误: Ambiguous Contract
+            m_currency = "USD";
+        }
+        //else if (flag == "6") // 债券
+        //{
+        //    m_securityType = "BOND"; // 没有找到BOND类型
+        //    m_securityID = "744567CN6";
+        //    m_idSource = "1"; // 1: CUSIP 4: ISIN
+        //}
+        else if (flag == "7") // 外汇
+        {
+            m_securityType = FIX::SecurityType_CASH;
+            // 交易ERU/USD
+            m_symbol = "EUR";  // 外汇的Symbol是Counter Currency;
+            m_currency = "USD"; // 外汇的Currency是Base Currency.
+            m_exDestination = "IDEALPRO"; // 外汇必须使用该值,不能使用SMART.
+            // IB文档存在6707的字段, 但是附录中没有. 猜测该模式已经无效.
+        }
+        else if (flag == "8") // 多腿
+        {
+            m_securityType = FIX::SecurityType_BRADY_BOND;
+            m_symbol = "CUSIP - 744567CN6";
+            m_currency = "USD";
+        }
+        else if (flag == "9") // 现货
+        {
+            m_securityType = "CMDTY";
+            m_symbol = "XAUUSD";
+        }
+        else if (flag == "10") // 基金(猜测是场外)
+        {
+            m_securityType = "FUND";
+            m_symbol = "BTIDX";
+            m_exDestination = "FUNDSERV";
+            // 根据文档必须携带, 否则返回错误: cashOrderQty is invalid
+            // 猜测是买入(申购)时必须指定CashOrderQty(152), 此时不需要携带OrderQty(38)
+            // 卖出(赎回)的时候, 此时使用38或152,可能取决于基金本身的规定.
+            // cashOrderQty; 卖出时可以不携带
+        }
+        else if (flag == "11") // 纳斯达克
+        {
+            m_symbol = "MSFT";
+            // m_securityExchange = "NASDAQ";
+            m_currency = "USD";
+        }
+        else if (flag == "12") // 港期所指数期权
+        {
+            // 根据IB文档, 期货期权需要ClearingAccount(440), 但是根据附录中的注释, 只有非清算的情况下才需要指定.
+            // 可能期货期权必然会出现交易和清算分离, 才会出现这种问题, 例如IB没有期货清算资格.
+            m_securityType = "FOP";
+            // 恒生指数
+            m_symbol = "HSI";
+            m_securityExchange = "HKFE"; // 指数期货只能是港期所
+            // m_currency = "HKD"; // 仅使用货币无法下单成功, 必须携带交易所.
+            m_maturityMonthYear = "202212";
+            // 港股期权目前是每个月最多一个, 所以是否带该值都可以.
+            // 如果携带, 则必须匹配个股期权正确的到期日, 否则返回错误:Unknown contract
+            // maturityDay有效值1~31.
+            m_maturityDay = "29";
+            m_strikePrice = "19000";
+            m_putOrCall = std::to_string(FIX::PutOrCall_CALL);
+        }
+        else if (flag == "13") // 港期所期货
+        {
+            m_securityType = FIX::SecurityType_FUTURE;
+            // 恒生指数
+            m_symbol = "HSI";
+            // 根据IB文档注释, 交易期货的时候, 必须将交易所参数设置到exDestination(100).
+            // 但是在实际测试中, tag100=SMART, 而使用SecurityExchange(207)设置真实交易所, 效果等同.
+            // 无论那种方式, 期货必须使用交易所, 不能依赖Currency指定.
+            m_exDestination = "HKFE";
+            // securityExchange = "HKFE";
+            m_maturityMonthYear = "202212";
+        }
+        else if (flag == "14") // 联交所港股期权
+        {
+            m_securityType = FIX::SecurityType_OPTION;
+            // 不能赋值在700, 只能使用对应HKATS代码700.
+            m_symbol = "TCH"; // 腾讯代码
+            m_securityExchange = "SEHK";
+            // m_currency = "HKD"; // 仅使用货币无法下单成功, 必须携带交易所.
+            m_maturityMonthYear = "202212";
+            // 港股期权目前是每个月最多一个, 所以是否带该值都可以.
+            // 如果携带, 则必须匹配个股期权正确的到期日, 否则返回错误:Unknown contract
+            // maturityDay有效值1~31.
+            m_maturityDay = "29";
+            m_strikePrice = "140";
+            m_putOrCall = std::to_string(FIX::PutOrCall_CALL);
+        }
+    }
+    else
+    {
+        m_symbol = "700"; // 不能有前缀0, 如00700, 否则返回错误:Unknown contract
+        m_securityExchange = "SEHK";
+    }
+
+    for (const auto& it : values)
+    {
+        if (it.first == "sty")
+        {
+            m_securityType = it.second;
+        }
+        else if (it.first == "sym")
+        {
+            m_symbol = it.second;
+        }
+        else if (it.first == "exg")
+        {
+            m_securityExchange = it.second;
+        }
+        else if (it.first == "cur")
+        {
+            m_currency = it.second;
+        }
+        else if (it.first == "may")
+        {
+            m_maturityMonthYear = it.second;
+        }
+        else if (it.first == "mad")
+        {
+            m_maturityDay = it.second;
+        }
+        else if (it.first == "stp")
+        {
+            m_strikePrice = it.second;
+        }
+        else if (it.first == "poc")
+        {
+            m_putOrCall = it.second;
+        }
+        else if (it.first == "rth")
+        {
+            // m_forceOnlyRTH = "1";
+        }
+        else if (it.first == "tif")
+        {
+            m_timeInForce = it.second;
+        }
+        else if (it.first == "sde")
+        {
+            m_side = it.second;
+        }
+        else if (it.first == "oty")
+        {
+            m_ordType = it.second;
+        }
+        else if (it.first == "odq")
+        {
+            m_orderQty = it.second;
+        }
+        else if (it.first == "pri")
+        {
+            m_price = it.second;
+        }
+        else if (it.first == "coq")
+        {
+            // m_cashOrderQty = it.second;
+        }
+        else if (it.first == "exd")
+        {
+            // m_expireDate = it.second;
+        }
+        else if (it.first == "ext")
+        {
+            // m_expireTime = it.second;
+        }
+        else if (it.first == "stx")
+        {
+            // m_stopPx = it.second;
+        }
+        else if (it.first == "eit")
+        {
+            // m_execInst = it.second;
+        }
+        else if (it.first == "pdf")
+        {
+            // m_pegDifference = it.second;
+        }
+        else if (it.first == "tau")
+        {
+            // m_trailingAmtUnit = it.second;
+        }
+        else if (it.first == "edt")
+        {
+            m_exDestination = it.second;
+        }
+        else if (it.first == "mfl")
+        {
+            // m_maxFloor = it.second;
+        }
+        else
+        {
+            // do nothing
+        }
+    }
+
+    sendCreateOrder();
+}
+
 void ClientApplication::sendModifyOrder(std::map<std::string, std::string>* params)
 {
     std::string timeInForce{};
@@ -1361,6 +1628,7 @@ void ClientApplication::sendModifyOrder(std::map<std::string, std::string>* para
     }
 
     FIX50::OrderCancelReplaceRequest msg{};
+
     // 设置公共的静态字段
     setupStaticFields(msg);
 
@@ -1465,18 +1733,4 @@ void ClientApplication::sendCancelOrder()
 
     // 将订单发送
     FIX::Session::sendToTarget(message);
-}
-
-void ClientApplication::resetData()
-{
-    m_exDestination = "0";
-    m_side = "";
-    m_ordType = "";
-    m_timeInForce = "";
-    m_symbol = "";
-    m_currency = "";
-    m_securityExchange = "";
-    m_price = "";
-    m_orderQty = "";
-    m_clOrdID = "";
 }
