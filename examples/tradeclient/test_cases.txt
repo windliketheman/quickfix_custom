@@ -34,6 +34,13 @@ cmd=i f=9 sde=1 oty=1 odq=1000
 场外基金
 cmd=i f=10 sde=1 oty=1 coq=1002.23
 
+多腿
+期权+期权
+mi sde=1 oty=2 odq=1000 pri=85 tif=0
+mi f=0 sde=1 oty=2 odq=1000 pri=85 tif=0
+期权+股票
+mi f=1 sde=1 oty=2 odq=1000 pri=85 tif=0
+
 ############################################################### time in force
 
 股票GTC
