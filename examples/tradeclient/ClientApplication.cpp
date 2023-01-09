@@ -1757,8 +1757,8 @@ void ClientApplication::sendCreateMultiOrder(std::map<std::string, std::string>*
     std::string securityExchange{};
     std::string currency{};
     std::string timeInForce{};
-    std::string side{ fix::Side_BUY };
-    std::string ordType{ fix::OrdType_MARKET };
+    std::string side{ FIX::Side_BUY };
+    std::string ordType{ FIX::OrdType_MARKET };
     std::string orderQty{ "1000" };
     std::string price{ "85" };
     std::string exDestination{};
@@ -1789,6 +1789,7 @@ void ClientApplication::sendCreateMultiOrder(std::map<std::string, std::string>*
     std::string legLocateReqd2{};
     std::string legLocateBroke2{};
 
+    auto values = *params;
     std::string flag{ "0" };  // 默认执行“0”
     if (values.cend() != values.find("f"))
         flag = values.at("f");
@@ -2002,62 +2003,56 @@ void ClientApplication::sendCreateMultiOrder(std::map<std::string, std::string>*
         }
     }
 
-    fix43::NewOrderMultileg msg{};
+    FIX50::NewOrderMultileg msg{};
+    // 设置公共的静态字段
+    setupStaticFields(msg);
 
-    msg.setField(fix::ClOrdID{ getNewClOrdID() });
-    // 按照IBFIX协议,Account必须携带.
-    // 如果不携带,那么返回错误:Invalid or missing IBCustAcctNo
-    // 如果使用master accont账户交易股票/期货/期权,那么返回错误:
-    // Submit of non-allocation order to master account I901238 for sectype STK/OPT is not allowed.
-    // 从IB的邮件中, 要求所有的订单都必须使用SubAccountID.
-    // IB规范中有使用Master Account ID的情况,暂时不需要关注.
-    msg.setField(fix::Account{ m_ctx.getCfg().getSubAccountIDMap().at("long") });
-    msg.setField(fix::FIELD::SecurityType, "MULTILEG");
-    if (!symbol.empty()) msg.setField(fix::FIELD::Symbol, symbol);
-    msg.setField(fix::FIELD::OrderQty, orderQty);
-    msg.setField(fix::FIELD::Side, side);
-    msg.setField(fix::FIELD::OrdType, ordType);
-    if (!exDestination.empty()) msg.setField(fix::ExDestination{ exDestination });
-    // msg.setField(fix::FIELD::CustomerOrFirm, "0");
-    if (!price.empty()) msg.setField(fix::FIELD::Price, price);
-    if (!timeInForce.empty()) msg.setField(fix::FIELD::TimeInForce, timeInForce);
+    msg.setField(FIX::ClOrdID{ queryClOrdID() });
+    msg.setField(FIX::FIELD::SecurityType, "MULTILEG");
+    if (!symbol.empty()) msg.setField(FIX::FIELD::Symbol, symbol);
+    msg.setField(FIX::FIELD::OrderQty, orderQty);
+    msg.setField(FIX::FIELD::Side, side);
+    msg.setField(FIX::FIELD::OrdType, ordType);
+    if (!exDestination.empty()) msg.setField(FIX::ExDestination{ exDestination });
+    // msg.setField(FIX::FIELD::CustomerOrFirm, "0");
+    if (!price.empty()) msg.setField(FIX::FIELD::Price, price);
+    if (!timeInForce.empty()) msg.setField(FIX::FIELD::TimeInForce, timeInForce);
     // 仅使用货币无法下单成功, 必须携带交易所.
-    if (!currency.empty()) msg.setField(fix::FIELD::Currency, currency);
-    if (!securityExchange.empty()) msg.setField(fix::FIELD::SecurityExchange, securityExchange);
+    if (!currency.empty()) msg.setField(FIX::FIELD::Currency, currency);
+    if (!securityExchange.empty()) msg.setField(FIX::FIELD::SecurityExchange, securityExchange);
 
-    fix43::NewOrderMultileg::NoLegs leg{};
-    if (!legSymbol1.empty()) leg.setField(fix::FIELD::LegSymbol, legSymbol1);
-    if (!legCFICode1.empty()) leg.setField(fix::FIELD::LegCFICode, legCFICode1);
-    if (!legMaturityDate1.empty()) leg.setField(fix::FIELD::LegMaturityDate, legMaturityDate1);
-    if (!legStrikePrice1.empty()) leg.setField(fix::FIELD::LegStrikePrice, legStrikePrice1);
-    if (!legPositionEffect1.empty()) leg.setField(fix::FIELD::LegPositionEffect, legPositionEffect1);
-    if (!legSecurityExchange1.empty()) leg.setField(fix::FIELD::LegSecurityExchange, legSecurityExchange1);
-    if (!legRatioQty1.empty()) leg.setField(fix::FIELD::LegRatioQty, legRatioQty1);
-    if (!legSide1.empty()) leg.setField(fix::FIELD::LegSide, legSide1);
-    if (!legContractMultiplier1.empty()) leg.setField(fix::FIELD::LegContractMultiplier, legContractMultiplier1);
+    FIX50::NewOrderMultileg::NoLegs leg{};
+    if (!legSymbol1.empty()) leg.setField(FIX::FIELD::LegSymbol, legSymbol1);
+    if (!legCFICode1.empty()) leg.setField(FIX::FIELD::LegCFICode, legCFICode1);
+    if (!legMaturityDate1.empty()) leg.setField(FIX::FIELD::LegMaturityDate, legMaturityDate1);
+    if (!legStrikePrice1.empty()) leg.setField(FIX::FIELD::LegStrikePrice, legStrikePrice1);
+    if (!legPositionEffect1.empty()) leg.setField(FIX::FIELD::LegPositionEffect, legPositionEffect1);
+    if (!legSecurityExchange1.empty()) leg.setField(FIX::FIELD::LegSecurityExchange, legSecurityExchange1);
+    if (!legRatioQty1.empty()) leg.setField(FIX::FIELD::LegRatioQty, legRatioQty1);
+    if (!legSide1.empty()) leg.setField(FIX::FIELD::LegSide, legSide1);
+    if (!legContractMultiplier1.empty()) leg.setField(FIX::FIELD::LegContractMultiplier, legContractMultiplier1);
     if (!shortSaleRule1.empty()) leg.setField(6086, shortSaleRule1);
     if (!legLocateReqd1.empty()) leg.setField(6215, legLocateReqd1);
     if (!legLocateBroke1.empty()) leg.setField(6216, legLocateBroke1);
     msg.addGroup(leg);
     leg.clear();
 
-    if (!legSymbol2.empty()) leg.setField(fix::FIELD::LegSymbol, legSymbol2);
-    if (!legCFICode2.empty()) leg.setField(fix::FIELD::LegCFICode, legCFICode2);
-    if (!legMaturityDate2.empty()) leg.setField(fix::FIELD::LegMaturityDate, legMaturityDate2);
-    if (!legStrikePrice2.empty()) leg.setField(fix::FIELD::LegStrikePrice, legStrikePrice2);
-    if (!legPositionEffect2.empty()) leg.setField(fix::FIELD::LegPositionEffect, legPositionEffect2);
-    if (!legSecurityExchange2.empty()) leg.setField(fix::FIELD::LegSecurityExchange, legSecurityExchange2);
-    if (!legRatioQty2.empty()) leg.setField(fix::FIELD::LegRatioQty, legRatioQty2);
-    if (!legSide2.empty()) leg.setField(fix::FIELD::LegSide, legSide2);
-    if (!legContractMultiplier2.empty()) leg.setField(fix::FIELD::LegContractMultiplier, legContractMultiplier2);
+    if (!legSymbol2.empty()) leg.setField(FIX::FIELD::LegSymbol, legSymbol2);
+    if (!legCFICode2.empty()) leg.setField(FIX::FIELD::LegCFICode, legCFICode2);
+    if (!legMaturityDate2.empty()) leg.setField(FIX::FIELD::LegMaturityDate, legMaturityDate2);
+    if (!legStrikePrice2.empty()) leg.setField(FIX::FIELD::LegStrikePrice, legStrikePrice2);
+    if (!legPositionEffect2.empty()) leg.setField(FIX::FIELD::LegPositionEffect, legPositionEffect2);
+    if (!legSecurityExchange2.empty()) leg.setField(FIX::FIELD::LegSecurityExchange, legSecurityExchange2);
+    if (!legRatioQty2.empty()) leg.setField(FIX::FIELD::LegRatioQty, legRatioQty2);
+    if (!legSide2.empty()) leg.setField(FIX::FIELD::LegSide, legSide2);
+    if (!legContractMultiplier2.empty()) leg.setField(FIX::FIELD::LegContractMultiplier, legContractMultiplier2);
     if (!shortSaleRule2.empty()) leg.setField(6086, shortSaleRule2);
     if (!legLocateReqd2.empty()) leg.setField(6215, legLocateReqd2);
     if (!legLocateBroke2.empty()) leg.setField(6216, legLocateBroke2);
     msg.addGroup(leg);
     leg.clear();
 
-    LOG_DEBUG("%s", msg.toString().c_str());
-    fix::Session::sendToTarget(msg, m_sid);
+    FIX::Session::sendToTarget(msg);
 }
 
 void ClientApplication::sendModifyMultiOrder(std::map<std::string, std::string>* params)
