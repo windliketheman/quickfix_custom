@@ -2175,6 +2175,34 @@
    <value enum='USTB' description='US_TREASURY_BILL' />
    <value enum='WAR' description='WARRANT' />
    <value enum='ZOO' description='CATS_TIGERS_LIONS' />
+   <!--
+   IB专门为美国期货的期权增加了FOP类型.
+   -->
+   <value enum='FOP' description='OPTIONS_ON_FUTURES' />
+   <!--
+   IB专门为支持差价合约类型.
+   -->
+   <value enum='CFD' description='CONTRACT_FOR_DIFFERENCE' />
+   <!--
+   IB专门为支持债券类型.
+   -->
+   <value enum='BOND' description='BONDS' />
+   <!--
+   IB专门为支持外汇类型.
+   -->
+   <value enum='CASH' description='FOREIGN_EXCHANGE' />
+   <!--
+   IB专门为支持基金类型.
+   -->
+   <value enum='FUND' description='MUTUAL_FUND' />
+   <!--
+   IB专门为支持商品现货类型.
+   -->
+   <value enum='CMDTY' description='SPOTS' />
+   <!--
+   IB专门为支持多腿消息类型.
+   -->
+   <value enum='MULTILEG' description='MULTILEG' />
   </field>
   <field number='168' name='EffectiveTime' type='UTCTIMESTAMP' />
   <field number='169' name='StandInstDbType' type='INT'>
