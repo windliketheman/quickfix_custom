@@ -18,6 +18,8 @@
 #include "quickfix/fix50/OrderCancelReject.h"
 #include "quickfix/fix50/OrderCancelReplaceRequest.h"
 #include "quickfix/fix50/MarketDataRequest.h"
+#include "quickfix/fix50/NewOrderMultileg.h"
+#include "quickfix/fix43/MultilegOrderCancelReplaceRequest.h"
 
 #include <queue>
 
@@ -76,6 +78,8 @@ private:
     void sendCreateOrder(std::map<std::string, std::string>* params);
     void sendCreateOrderX(std::map<std::string, std::string>* params);
     void sendModifyOrder(std::map<std::string, std::string>* params);
+    void sendCreateMultiOrder(std::map<std::string, std::string>* params);
+    void sendModifyMultiOrder(std::map<std::string, std::string>* params);
     void sendCreateOrder();
     void sendModifyOrder();
     void sendCancelOrder();

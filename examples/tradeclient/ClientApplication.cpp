@@ -934,6 +934,16 @@ void ClientApplication::startTestCaseAction()
             // 取消订单
             sendCancelOrder();
         }
+        else  if (boost::iequals(cmd, "mi"))
+        {
+            // 创建订单
+            sendCreateMultiOrder(&params);
+        }
+        else if (boost::iequals(cmd, "mm"))
+        {
+            // 修改订单
+            sendModifyMultiOrder(&params);
+        }
         else if (boost::iequals(cmd, "ix"))
         {
             // 创建订单
@@ -1699,6 +1709,364 @@ void ClientApplication::sendModifyOrder(std::map<std::string, std::string>* para
     // msg.setField(6207, "2222222222");
 
     // 将订单发送
+    FIX::Session::sendToTarget(msg);
+}
+
+void ClientApplication::sendCreateMultiOrder(std::map<std::string, std::string>* params)
+{
+    // 测试多腿
+    // f=0 sym=AAPL exg=ISE cur=USD tif=0 sde=1 oty=1 odq=1000 pri=85 rth may=202212 mad=29 stp=310 poc=0 sid=122 ids=0 coq=100 exd=20230115 stx=12.5 eit=R pdf=2 tau=100 edt=SMART mfl=50
+    // f (flag): 0-港股 1-股票 2-股票期权 3-期货 4-期货期权 5-差价合约 6-债券 7-外汇 8-多腿 11-美股纳斯达克 12-港指期权 13-港股期货 14-港股期权 
+    // sym (symbol):
+    // exg (securityExchange): SEHK-联交所 NYSE NASDAQ HKFE-港期所
+    // cur (currency): USD HKD
+    // tif (timeInForce): 0-DAY 1-GTC 2-ATO 3-IOC(FAK) 4-FOK 6-GTD 7-ATC 8-Auction
+    // sde (side): 1-Buy(默认) 2-Sell 5-SellShort
+    // oty (ordType): 1-Market(默认) 2-Limit 3-Stop 4-StopLimit
+    // odq (ordQty): 1000(默认)
+    // pri (price): 85(默认)
+    // edt (exDestination)
+    // 
+    // lsb1 (LegSymbol-1)：腿1-代码，默认和symbol一致，不一致时单独设置
+    // lcc1 (LegCFICode-1)：腿1-CFICode，OC – call option, OP – put option, ES – stock
+    // lmd1 (LegMaturityDate-1)：腿1-到期日
+    // lsp1 (LegStrikePrice-1)：腿1-行权价
+    // lpe1 (LegPositionEffect-1)：腿1-仓位，开仓O（Open）、平仓C（Close）
+    // lse1 (LegSecurityExchange-1)
+    // lrq1 (LegRatioQty-1)：腿1-配比数量
+    // lsd1 (LegSide-1)：腿1-方向，1=Buy, 2=Sell
+    // lcm1 (LegContractMultiplier-1)
+    // ssr1 (ShortSaleRule-1)
+    // llr1 (LegLocateReqd-1)
+    // llb1 (LegLocateBroke-1)
+    // 
+    // lsb2 (LegSymbol-2)：腿2-代码，默认和symbol一致，不一致时单独设置
+    // lcc2 (LegCFICode-2)：腿2-CFICode，OC – call option, OP – put option, ES – stock
+    // lmd2 (LegMaturityDate-2)：腿2-到期日
+    // lsp2 (LegStrikePrice-2)：腿2-行权价
+    // lpe2 (LegPositionEffect-2)：腿2-仓位，开仓O（Open）、平仓C（Close）
+    // lse2 (LegSecurityExchange-2)
+    // lrq2 (LegRatioQty-2)：腿2-配比数量
+    // lsd2 (LegSide-2)：腿2-方向，1=Buy, 2=Sell
+    // lcm2 (LegContractMultiplier-2)
+    // ssr2 (ShortSaleRule-2)
+    // llr2 (LegLocateReqd-2)
+    // llb2 (LegLocateBroke-2)
+    // 股票
+    std::string symbol{};
+    std::string securityExchange{};
+    std::string currency{};
+    std::string timeInForce{};
+    std::string side{ fix::Side_BUY };
+    std::string ordType{ fix::OrdType_MARKET };
+    std::string orderQty{ "1000" };
+    std::string price{ "85" };
+    std::string exDestination{};
+    // 腿1
+    std::string legSymbol1{};
+    std::string legCFICode1{};
+    std::string legMaturityDate1{};
+    std::string legStrikePrice1{};
+    std::string legPositionEffect1{};
+    std::string legSecurityExchange1{};
+    std::string legRatioQty1{};
+    std::string legSide1{};
+    std::string legContractMultiplier1{};
+    std::string shortSaleRule1{};
+    std::string legLocateReqd1{};
+    std::string legLocateBroke1{};
+    // 腿2
+    std::string legSymbol2{};
+    std::string legCFICode2{};
+    std::string legMaturityDate2{};
+    std::string legStrikePrice2{};
+    std::string legPositionEffect2{};
+    std::string legSecurityExchange2{};
+    std::string legRatioQty2{};
+    std::string legSide2{};
+    std::string legContractMultiplier2{};
+    std::string shortSaleRule2{};
+    std::string legLocateReqd2{};
+    std::string legLocateBroke2{};
+
+    std::string flag{ "0" };  // 默认执行“0”
+    if (values.cend() != values.find("f"))
+        flag = values.at("f");
+
+    if (flag == "0") // 期权+期权多腿
+    {
+        // IB测试的总结，SecurityExchange、Currency都必须携带
+        securityExchange = "SMART";
+        currency = "USD";
+        // symbol = "IBM";
+        // 腿1
+        legSymbol1 = "IBM"; // 期权+期权多腿，当legSymbol1与symbol一致时，1）只传symbol、2）只传legSymbol1、3）两者都传，都是可以的
+        legCFICode1 = "OCXXXX";
+        legMaturityDate1 = "20230120";
+        legStrikePrice1 = "128";
+        legPositionEffect1 = "O";
+        legRatioQty1 = "1";
+        legSide1 = "1";
+        // 腿2
+        legSymbol2 = "AAPL"; // 期权+期权多腿，当legSymbol1与symbol一致时，1）只传symbol、2）只传legSymbol1、3）两者都传，都是可以的
+        legCFICode2 = "OPXXXX";
+        legMaturityDate2 = "20230203";
+        legStrikePrice2 = "137";
+        legPositionEffect2 = "O";
+        legRatioQty2 = "1";
+        legSide2 = "1";
+    }
+    else if (flag == "1") // 期权+股票多腿
+    {
+        // IB does not support combination orders with  stkopt or optstk ratio above
+        // IB测试的总结，SecurityExchange、Currency都必须携带
+        securityExchange = "SMART";
+        currency = "USD";
+        // symbol = "AAPL"; // 期权+期权多腿，，当legSymbol1与symbol一致时，legSymbol1必须传，symbol传与不传都可以
+        // 腿1
+        legSymbol1 = "IBM";
+        legCFICode1 = "OCXXXX";
+        legMaturityDate1 = "20230120";
+        legStrikePrice1 = "128";
+        legPositionEffect1 = "O";
+        legRatioQty1 = "1";
+        legSide1 = "1";
+        // 腿2
+        legSymbol2 = "IBM";
+        legCFICode2 = "ESXXXX";
+        legPositionEffect2 = "O";
+        // legSecurityExchange2 = "SMART";
+        legRatioQty2 = "1";
+        legSide2 = "1";
+        legContractMultiplier2 = "100";
+        shortSaleRule2 = "2";
+        legLocateReqd2 = "N";
+        legLocateBroke2 = "N";
+    }
+    else if (flag == "2") // 股票+股票多腿
+    {
+        // IB does not support combination orders with  stkopt or optstk ratio above
+        // IB测试的总结，SecurityExchange、Currency都必须携带
+        securityExchange = "SMART";
+        currency = "USD";
+        // symbol = "AAPL"; // 期权+期权多腿，，当legSymbol1与symbol一致时，legSymbol1必须传，symbol传与不传都可以
+        // 腿1
+        legSymbol1 = "IBM";
+        legCFICode1 = "ES";
+        legPositionEffect1 = "O";
+        legRatioQty1 = "1";
+        legSide1 = "1";
+        // 腿2
+        legSymbol2 = "IMB";
+        legCFICode2 = "ES";
+        legPositionEffect2 = "O";
+        legRatioQty2 = "1";
+        legSide2 = "2";
+    }
+
+    for (const auto& it : values)
+    {
+        if (it.first == "sym")
+        {
+            symbol = it.second;
+        }
+        else if (it.first == "exg")
+        {
+            securityExchange = it.second;
+        }
+        else if (it.first == "cur")
+        {
+            currency = it.second;
+        }
+        else if (it.first == "tif")
+        {
+            timeInForce = it.second;
+        }
+        else if (it.first == "sde")
+        {
+            side = it.second;
+        }
+        else if (it.first == "oty")
+        {
+            ordType = it.second;
+        }
+        else if (it.first == "odq")
+        {
+            orderQty = it.second;
+        }
+        else if (it.first == "pri")
+        {
+            price = it.second;
+        }
+        else if (it.first == "edt")
+        {
+            exDestination = it.second;
+        }
+        // 腿1
+        else if (it.first == "lsb1")
+        {
+            legSymbol1 = it.second;
+        }
+        else if (it.first == "lcc1")
+        {
+            legCFICode1 = it.second;
+        }
+        else if (it.first == "lmd1")
+        {
+            legMaturityDate1 = it.second;
+        }
+        else if (it.first == "lsp1")
+        {
+            legStrikePrice1 = it.second;
+        }
+        else if (it.first == "lpe1")
+        {
+            legPositionEffect1 = it.second;
+        }
+        else if (it.first == "lse1")
+        {
+            legSecurityExchange1 = it.second;
+        }
+        else if (it.first == "lrq1")
+        {
+            legRatioQty1 = it.second;
+        }
+        else if (it.first == "lsd1")
+        {
+            legSide1 = it.second;
+        }
+        else if (it.first == "lcm1")
+        {
+            legContractMultiplier1 = it.second;
+        }
+        else if (it.first == "ssr1")
+        {
+            shortSaleRule1 = it.second;
+        }
+        else if (it.first == "llr1")
+        {
+            legLocateReqd1 = it.second;
+        }
+        else if (it.first == "llb1")
+        {
+            legLocateBroke1 = it.second;
+        }
+        // 腿2
+        else if (it.first == "lsb2")
+        {
+            legSymbol2 = it.second;
+        }
+        else if (it.first == "lcc2")
+        {
+            legCFICode2 = it.second;
+        }
+        else if (it.first == "lmd2")
+        {
+            legMaturityDate2 = it.second;
+        }
+        else if (it.first == "lsp2")
+        {
+            legStrikePrice2 = it.second;
+        }
+        else if (it.first == "lpe2")
+        {
+            legPositionEffect2 = it.second;
+        }
+        else if (it.first == "lse2")
+        {
+            legSecurityExchange2 = it.second;
+        }
+        else if (it.first == "lrq2")
+        {
+            legRatioQty2 = it.second;
+        }
+        else if (it.first == "lsd2")
+        {
+            legSide2 = it.second;
+        }
+        else if (it.first == "lcm2")
+        {
+            legContractMultiplier2 = it.second;
+        }
+        else if (it.first == "ssr2")
+        {
+            shortSaleRule2 = it.second;
+        }
+        else if (it.first == "llr2")
+        {
+            legLocateReqd2 = it.second;
+        }
+        else if (it.first == "llb2")
+        {
+            legLocateBroke2 = it.second;
+        }
+    }
+
+    fix43::NewOrderMultileg msg{};
+
+    msg.setField(fix::ClOrdID{ getNewClOrdID() });
+    // 按照IBFIX协议,Account必须携带.
+    // 如果不携带,那么返回错误:Invalid or missing IBCustAcctNo
+    // 如果使用master accont账户交易股票/期货/期权,那么返回错误:
+    // Submit of non-allocation order to master account I901238 for sectype STK/OPT is not allowed.
+    // 从IB的邮件中, 要求所有的订单都必须使用SubAccountID.
+    // IB规范中有使用Master Account ID的情况,暂时不需要关注.
+    msg.setField(fix::Account{ m_ctx.getCfg().getSubAccountIDMap().at("long") });
+    msg.setField(fix::FIELD::SecurityType, "MULTILEG");
+    if (!symbol.empty()) msg.setField(fix::FIELD::Symbol, symbol);
+    msg.setField(fix::FIELD::OrderQty, orderQty);
+    msg.setField(fix::FIELD::Side, side);
+    msg.setField(fix::FIELD::OrdType, ordType);
+    if (!exDestination.empty()) msg.setField(fix::ExDestination{ exDestination });
+    // msg.setField(fix::FIELD::CustomerOrFirm, "0");
+    if (!price.empty()) msg.setField(fix::FIELD::Price, price);
+    if (!timeInForce.empty()) msg.setField(fix::FIELD::TimeInForce, timeInForce);
+    // 仅使用货币无法下单成功, 必须携带交易所.
+    if (!currency.empty()) msg.setField(fix::FIELD::Currency, currency);
+    if (!securityExchange.empty()) msg.setField(fix::FIELD::SecurityExchange, securityExchange);
+
+    fix43::NewOrderMultileg::NoLegs leg{};
+    if (!legSymbol1.empty()) leg.setField(fix::FIELD::LegSymbol, legSymbol1);
+    if (!legCFICode1.empty()) leg.setField(fix::FIELD::LegCFICode, legCFICode1);
+    if (!legMaturityDate1.empty()) leg.setField(fix::FIELD::LegMaturityDate, legMaturityDate1);
+    if (!legStrikePrice1.empty()) leg.setField(fix::FIELD::LegStrikePrice, legStrikePrice1);
+    if (!legPositionEffect1.empty()) leg.setField(fix::FIELD::LegPositionEffect, legPositionEffect1);
+    if (!legSecurityExchange1.empty()) leg.setField(fix::FIELD::LegSecurityExchange, legSecurityExchange1);
+    if (!legRatioQty1.empty()) leg.setField(fix::FIELD::LegRatioQty, legRatioQty1);
+    if (!legSide1.empty()) leg.setField(fix::FIELD::LegSide, legSide1);
+    if (!legContractMultiplier1.empty()) leg.setField(fix::FIELD::LegContractMultiplier, legContractMultiplier1);
+    if (!shortSaleRule1.empty()) leg.setField(6086, shortSaleRule1);
+    if (!legLocateReqd1.empty()) leg.setField(6215, legLocateReqd1);
+    if (!legLocateBroke1.empty()) leg.setField(6216, legLocateBroke1);
+    msg.addGroup(leg);
+    leg.clear();
+
+    if (!legSymbol2.empty()) leg.setField(fix::FIELD::LegSymbol, legSymbol2);
+    if (!legCFICode2.empty()) leg.setField(fix::FIELD::LegCFICode, legCFICode2);
+    if (!legMaturityDate2.empty()) leg.setField(fix::FIELD::LegMaturityDate, legMaturityDate2);
+    if (!legStrikePrice2.empty()) leg.setField(fix::FIELD::LegStrikePrice, legStrikePrice2);
+    if (!legPositionEffect2.empty()) leg.setField(fix::FIELD::LegPositionEffect, legPositionEffect2);
+    if (!legSecurityExchange2.empty()) leg.setField(fix::FIELD::LegSecurityExchange, legSecurityExchange2);
+    if (!legRatioQty2.empty()) leg.setField(fix::FIELD::LegRatioQty, legRatioQty2);
+    if (!legSide2.empty()) leg.setField(fix::FIELD::LegSide, legSide2);
+    if (!legContractMultiplier2.empty()) leg.setField(fix::FIELD::LegContractMultiplier, legContractMultiplier2);
+    if (!shortSaleRule2.empty()) leg.setField(6086, shortSaleRule2);
+    if (!legLocateReqd2.empty()) leg.setField(6215, legLocateReqd2);
+    if (!legLocateBroke2.empty()) leg.setField(6216, legLocateBroke2);
+    msg.addGroup(leg);
+    leg.clear();
+
+    LOG_DEBUG("%s", msg.toString().c_str());
+    fix::Session::sendToTarget(msg, m_sid);
+}
+
+void ClientApplication::sendModifyMultiOrder(std::map<std::string, std::string>* params)
+{
+    FIX43::MultilegOrderCancelReplaceRequest msg{};
+
+    // 设置公共的静态字段
+    setupStaticFields(msg);
+
     FIX::Session::sendToTarget(msg);
 }
 
