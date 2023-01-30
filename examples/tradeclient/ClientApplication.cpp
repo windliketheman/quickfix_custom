@@ -741,6 +741,9 @@ void ClientApplication::setupCancelMessage(FIX::Message& message)
         message.setField(FIX::FIELD::SecurityExchange, securityExchange);
     
     message.setField(FIX::TransactTime());
+
+    // 设置公共的静态字段
+    setupStaticFields(message);
 }
 
 void ClientApplication::startOptionAction()
