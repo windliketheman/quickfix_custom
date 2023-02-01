@@ -14,6 +14,9 @@
 #include <algorithm>
 #include <vector>
 
+// 要测试的路由ID，20：IBFIX，5：IBTWS
+#define TEST_ROUTE_ID "20"
+
 // 1: 执行测试用例，2：期权测试
 #define STSRT_ACTION '1'
 
@@ -605,7 +608,7 @@ void ClientApplication::setupStaticFields(FIX::Message& message)
     header.setField(FIX::FIELD::SenderCompID, "client1"); // SenderCompID <49> field，
     header.setField(FIX::FIELD::TargetCompID, "gateway"); // TargetCompID <56> field，
 
-    message.setField(20005, "20");                        // IB Gateway
+    message.setField(20005, TEST_ROUTE_ID);               // 路由ID
     message.setField(FIX::FIELD::Account, m_account);     // 终端账号，CLientDemo和OrderService通信可以随意取
     // message.setField(FIX::FIELD::HandlInst, "1");
     message.setField(FIX::FIELD::SecurityExchange, "US"); // 必带参数
