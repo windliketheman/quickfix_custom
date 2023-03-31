@@ -15,10 +15,10 @@
 #include <vector>
 
 // 要测试的路由ID，20：IBFIX，5：IBTWS
-#define TEST_ROUTE_ID "20"
+#define TEST_ROUTE_ID "101"
 
 // 1: 执行测试用例，2：期权测试
-#define STSRT_ACTION '1'
+// #define STSRT_ACTION '3'
 
 namespace
 {
@@ -357,52 +357,39 @@ void ClientApplication::run()
 {
     while (true)
     {
-        try
+        char action = m_action;
+        if (!action)
         {
-            char action = m_action;
-            if (!action)
-            {
 #ifdef STSRT_ACTION
-                // 指定运行某项，不选择
-                action = STSRT_ACTION;
-#elif
-                std::cout << std::endl
-                    << "请选择: " << std::endl
-                    << "1) 执行测试用例" << std::endl
-                    << "2) 测试期权" << std::endl
-                    << "3) 退出" << std::endl;
-
-                std::cin >> action;
-                m_action = action;
-#endif // STSRT_ACTION
-            }
-            
-            switch (action)
-            {
-                case '1': case '2': case '3': case '4': break;
-                default: throw std::exception();
-            }
-
-            if (action == '1')
-                // 开始执行测试用例
-                startTestCaseAction();
-            else if (action == '2')
-                // 开始期权测试
-                startOptionAction();
-            else if (action == '3')
-                // 退出，结束程序
-                break;
-        }
-        catch (std::exception& e)
-        {
-            // 设置颜色RED
-            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_INTENSITY | FOREGROUND_RED);
+            // 指定运行某项，不选择
+            action = STSRT_ACTION;
+#else
             std::cout << std::endl
-                << "Message Not Sent: " << e.what() << std::endl
-                << std::endl;
-            // 还原颜色
-            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+                << "请选择: " << std::endl
+                << "1) 执行测试用例" << std::endl
+                << "2) 测试期权" << std::endl
+                << "3) 退出" << std::endl;
+
+            std::cin >> action;
+#endif // STSRT_ACTION
         }
+
+        switch (action)
+        {
+        case '1': case '2': case '3': break;
+        default: action = '1';
+        }
+        m_action = action;
+
+        if (action == '1')
+            // 开始执行测试用例
+            startTestCaseAction();
+        else if (action == '2')
+            // 开始期权测试
+            startOptionAction();
+        else if (action == '3')
+            // 退出，结束程序
+            break;
     }
 }
 
@@ -613,6 +600,9 @@ void ClientApplication::setupStaticFields(FIX::Message& message)
     // message.setField(FIX::FIELD::HandlInst, "1");
     message.setField(FIX::FIELD::SecurityExchange, "US"); // 必带参数
     message.setField(FIX::FIELD::Currency, "USD");        // 必带参数
+
+    // IBTWS
+    message.setField(FIX::FIELD::Country, m_country);
 }
 
 void ClientApplication::setupCreateMessage(FIX::Message& message)
@@ -663,6 +653,11 @@ void ClientApplication::setupCreateMessage(FIX::Message& message)
     }
 
     message.setField(FIX::TransactTime());
+
+    // IBTWS
+    std::string country = m_country;
+    if (!country.empty())
+        message.setField(FIX::FIELD::Country, country);
 
     // 设置公共的静态字段
     setupStaticFields(message);
@@ -914,7 +909,7 @@ void ClientApplication::startTestCaseAction()
 
     std::string str = chars;
     // 把字符产全部转换成小写字母。transform()有4个参数，转换字符串起始地址、终止地址、输出到的位置、转换操作
-    transform(str.begin(), str.end(), str.begin(), ::tolower);
+    // transform(str.begin(), str.end(), str.begin(), ::tolower); 由于参数value可能需要大写，因此不能一律转成小写
 
     // 解析命令，并修改成员变量，用作请求消息参数
     std::map<std::string, std::string> params = parseString(str);
@@ -954,6 +949,11 @@ void ClientApplication::startTestCaseAction()
         {
             // 创建订单
             sendCreateOrderX(&params);
+        }
+        else if (boost::iequals(cmd, "e"))
+        {
+            // 发送错误码
+            sendErrorCode(&params);
         }
         else
         {
@@ -2102,4 +2102,193 @@ void ClientApplication::sendCancelOrder()
 
     // 将订单发送
     FIX::Session::sendToTarget(message);
+}
+
+void ClientApplication::sendErrorCode(std::map<std::string, std::string>* params)
+{
+    std::string flag{};
+    std::string idSource{};
+    std::string symbol{};
+    std::string currency{};
+    std::string securityType{};
+    std::string securityExchange{};
+    std::string timeInForce{};
+    std::string side{ FIX::Side_BUY };
+    std::string ordType{ FIX::OrdType_MARKET };
+    std::string putOrCall{};
+    std::string orderQty{ "1000" };
+    std::string price{};
+    std::string exDestination{ "0" };
+    std::string stopPx{};
+
+    std::string ordStatus{ "0" };
+    std::string execType{ "0" };
+    std::string text{ "test" };
+
+    auto values = *params;
+    if (values.find("f") != values.cend())
+    {
+        flag = values.at("f");
+        if (flag == "0")
+        {
+            ordStatus = "8";
+            execType = "8";
+            text = "YOUR ORDER IS NOT ACCEPTED. IN ORDER TO OBTAIN THE DESIRED POSITION YOUR EQUITY WITH LOAN VALUE [369872.44 USD] MUST EXCEED THE INITIAL MARGIN [378741.59 USD]";
+        }
+        else if (flag == "1")
+        {
+            ordStatus = "8";
+            execType = "8";
+            text = "Only closing orders are permitted in this instrument.";
+        }
+        else if (flag == "2")
+        {
+            ordStatus = "4";
+            execType = "4";
+            text = "does not accept odd lot order";
+        }
+        else if (flag == "3")
+        {
+            ordStatus = "4";
+            execType = "4";
+            text = "Non-marketable order does not meet the minimum tier size of";
+        }
+
+        symbol = "AAPL";
+        // securityExchange = "NYSE"; 不需要指明交易所.
+        currency = "USD";
+    }
+    else
+    {
+        symbol = "700";
+        securityExchange = "SEHK";
+    }
+
+    for (const auto& it : values)
+    {
+        if (it.first == "sty")
+        {
+            securityType = it.second;
+        }
+        else if (it.first == "sym")
+        {
+            symbol = it.second;
+        }
+        else if (it.first == "exg")
+        {
+            securityExchange = it.second;
+        }
+        else if (it.first == "cur")
+        {
+            currency = it.second;
+        }
+        else if (it.first == "poc")
+        {
+            putOrCall = it.second;
+        }
+        else if (it.first == "tif")
+        {
+            timeInForce = it.second;
+        }
+        else if (it.first == "sde")
+        {
+            side = it.second;
+        }
+        else if (it.first == "oty")
+        {
+            ordType = it.second;
+        }
+        else if (it.first == "odq")
+        {
+            orderQty = it.second;
+        }
+        else if (it.first == "pri")
+        {
+            price = it.second;
+        }
+        else if (it.first == "stx")
+        {
+            stopPx = it.second;
+        }
+        else if (it.first == "edt")
+        {
+            exDestination = it.second;
+        }
+    }
+
+    FIX50::NewOrderSingle msg{};
+
+    // 设置公共的静态字段
+    setupStaticFields(msg);
+
+    if (!securityType.empty()) msg.setField(FIX::FIELD::SecurityType, securityType);
+    // 按照IBFIX协议,Account必须携带.
+    // 如果不携带,那么返回错误:Invalid or missing IBCustAcctNo
+    // 如果使用master accont账户交易股票/期货/期权,那么返回错误:
+    // Submit of non-allocation order to master account I901238 for sectype STK/OPT is not allowed.
+    // 从IB的邮件中, 要求所有的订单都必须使用SubAccountID.
+    // IB规范中有使用Master Account ID的情况,暂时不需要关注.
+    // msg.setField(FIX::Account{ m_ctx.getCfg().getSubAccountIDMap().at("long") });
+    // 根据IB的测试邮件通知,股票(不确认是否其它品种,猜测是)最好全部使用SMART.
+    // IB文档中,则说明:IBKR does not support SMART routing for futures. The destination exchange must be 
+    // specified in tag 100.
+    // 目前倾向于通过207区分具体的交易所地址.(尽量避免使用货币, 因为很多交易所可以使用多种货币区分).
+    msg.setField(FIX::ExDestination{ exDestination });
+    // 如果不携带该值,
+    // 那么返回拒绝, 错误原因:Invalid BD flag or Origin
+    // 从IB的测试邮件中, 要求必须为0.
+    msg.setField(FIX::CustomerOrFirm{ FIX::CustomerOrFirm_CUSTOMER });
+    // 按照IBFIX协议,下美股IBM,且100=SMART的时候,如果ExDestination是SMART时,
+    // 1. SecurityExchange和Currency都不携带,
+    // 那么返回拒绝,错误原因是:Ambiguous Contract.
+    // 2. 仅携带SecurityExchange时,如果值错误,
+    // 那么返回拒绝,错误原因是:Invalid destination exchange specified
+    // 文档说参考FIX 4.2规范的Appendix C. 如链接:
+    // https://www.onixs.biz/fix-dictionary/4.2/app_c.html
+    // 实际上不是参考该规范.
+    // 例如纽交所代码, 按照FIX 4.2附录C的规范,应该填N,但实际上应该填写NYSE.
+    // 从实际看, 该参数值实际需要参考TWS上Primary Exchange代码.
+    // 目前已知NYSE(纽交所)/NASDAQ/SEHK(联交所)/HKFE(港期所)
+    // 
+    // 下美股MSFT的个股期权,且100=SMART的时候,不使用207就能下单成功.
+    // 如果填写207的值, 必须填写正确的交易所CBOE, 否则报错误:Unknown contract
+    //
+    // 如果是美股, 部分股票可以填写NYSE或者NASDAQ都可以.
+    // 大部分必须使用正确的上市交易所, 否则返回错误:Invalid destination exchange specified
+    //
+    // 综上所述, 当使用SMART的时候, 美国交易所的代码, 优先使用Currency,即USD.
+    // 非美国交易所, 仅使用货币无效, 基本必须使用SecurityExchange区分.
+    if (!securityExchange.empty()) msg.setField(FIX::FIELD::SecurityExchange, securityExchange);
+    // 货币本来应该是指定价格的货币.但是没有在FIX标准中找到Currency具体对应下单Price的货币,还是行情Price的货币.
+    // 目前IB实际上用于指定行情Price的货币.
+    // securityExchange和currency是"或"关系.可以两者都存在.如果与都存在,那么必须都正确,
+    // 否则返回:Unknown contract
+    if (!currency.empty()) msg.setField(FIX::FIELD::Currency, currency);
+    // 如果Symbol填写错误, 将返回错误:Unknown contract.
+    // 港股代码必须与交易所等同,不能包含前缀0.
+    // 根据文档理解, 衍生品代码有两种下单方式,我们统一使用标准FIX的下单方式.
+    if (!symbol.empty()) msg.setField(FIX::Symbol{ symbol });
+    if (!idSource.empty()) msg.setField(FIX::IDSource{ idSource });
+    
+    msg.setField(FIX::FIELD::OrdType, ordType);
+    if (!timeInForce.empty()) msg.setField(FIX::FIELD::TimeInForce, timeInForce);
+    // 按照规范, 支持做空. 但是UAT环境一直返回错误:Sell short variant is not supported
+    msg.setField(FIX::FIELD::Side, side);
+    // 市价单的时候,一定不能携带该值. 否则将返回错误的消息:Invalid value in field # 44
+    if (!price.empty()) msg.setField(FIX::FIELD::Price, price);
+    if (!stopPx.empty()) msg.setField(FIX::FIELD::StopPx, stopPx);
+    // 如果OrderQty不符合交易所交易单位要求, 返回错误消息:order size must be a multiple of lot size
+    msg.setField(FIX::FIELD::OrderQty, orderQty);
+    msg.setField(FIX::ClOrdID{ queryClOrdID() });
+    // 根据IB邮件说明, 最好携带该值, 表明综合账户的子账户.
+    msg.setField(6207, "11111111");
+
+    msg.setField(FIX::FIELD::OrderID, "11111111");
+    msg.setField(FIX::FIELD::ExecID, "11111111");
+    msg.setField(FIX::FIELD::OrdStatus, ordStatus);
+    msg.setField(FIX::FIELD::ExecType, execType);
+    msg.setField(FIX::FIELD::Text, text);
+
+    // 将订单发送
+    FIX::Session::sendToTarget(msg);
 }

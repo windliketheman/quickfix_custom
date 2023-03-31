@@ -84,6 +84,9 @@ private:
     void sendModifyOrder();
     void sendCancelOrder();
 
+    // 测试错误码
+    void sendErrorCode(std::map<std::string, std::string>* params);
+
 private:
     char m_action{ NULL };
 
@@ -102,6 +105,9 @@ private:
     std::string m_maturityDay{ "" };
     std::string m_strikePrice{ "" };
     std::string m_putOrCall{ "" };
+
+    // IBTWS
+    std::string m_country{ "CHN" };
 
     // 账号相关
     std::string m_account{ "" };
