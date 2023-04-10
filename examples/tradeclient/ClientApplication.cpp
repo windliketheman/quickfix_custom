@@ -2104,6 +2104,7 @@ void ClientApplication::sendCancelOrder()
     FIX::Session::sendToTarget(message);
 }
 
+// 测试错误码: cmd=e f=0/1/2/3...
 void ClientApplication::sendErrorCode(std::map<std::string, std::string>* params)
 {
     std::string flag{};
@@ -2152,6 +2153,12 @@ void ClientApplication::sendErrorCode(std::map<std::string, std::string>* params
             ordStatus = "4";
             execType = "4";
             text = "Non-marketable order does not meet the minimum tier size of";
+        }
+        else if (flag == "4")
+        {
+            ordStatus = "4";
+            execType = "4";
+            text = "Contract is not supported";
         }
 
         symbol = "AAPL";
