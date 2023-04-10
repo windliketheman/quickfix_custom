@@ -22,6 +22,52 @@
 
 namespace
 {
+    void split(std::string const& str, std::string const& delim, std::map<std::string, int>& out)
+    {
+        size_t start;
+        size_t end = 0;
+
+        while ((start = str.find_first_not_of(delim, end)) != std::string::npos)
+        {
+            end = str.find(delim, start);
+            out[str.substr(start, end - start)] = 0;
+        }
+    }
+
+    void split(std::string const& str, std::string const& delim, std::vector<std::string>& out)
+    {
+        size_t start;
+        size_t end = 0;
+
+        while ((start = str.find_first_not_of(delim, end)) != std::string::npos)
+        {
+            end = str.find(delim, start);
+            out.push_back(str.substr(start, end - start));
+        }
+    }
+
+    std::map<std::string, std::string> parseParameters(std::string const& str, char delim = '=')
+    {
+        std::vector<std::string> parts;
+        split(str, " ", parts);
+
+        std::map<std::string, std::string> result;
+        for (const auto& item : parts)
+        {
+            size_t pos = item.find(delim);
+            if (pos != item.npos && pos != 0 && pos != item.size() - 1)
+            {
+                // substr 子串是，在字符位置pos开始，跨越len个字符（或直到字符串的结尾，以先到者为准）对象的部分
+                result.emplace(item.substr(0, pos), item.substr(pos + 1));
+            }
+            else
+            {
+                // error format
+            }
+        }
+        return result;
+    }
+
     size_t find(const std::string& line, std::vector<std::string> vect, int pos = 0)
     {
         int eol1;
@@ -912,7 +958,7 @@ void ClientApplication::startTestCaseAction()
     // transform(str.begin(), str.end(), str.begin(), ::tolower); 由于参数value可能需要大写，因此不能一律转成小写
 
     // 解析命令，并修改成员变量，用作请求消息参数
-    std::map<std::string, std::string> params = parseString(str);
+    std::map<std::string, std::string> params = parseParameters(str);
 
     // map判断有某个key
     // std::map<std::string, std::string>::iterator iter = params.find("cmd");
@@ -2295,6 +2341,14 @@ void ClientApplication::sendErrorCode(std::map<std::string, std::string>* params
     msg.setField(FIX::FIELD::OrdStatus, ordStatus);
     msg.setField(FIX::FIELD::ExecType, execType);
     msg.setField(FIX::FIELD::Text, text);
+
+    const std::string bcan = "BJJ179.12345678";
+    size_t pos = bcan.find(".");
+    if (pos != bcan.npos && pos != 0 && pos != bcan.size() - 1)
+    {
+        msg.setField(8431, bcan.substr(0, pos));
+        msg.setField(8429, bcan.substr(pos + 1));
+    }
 
     // 将订单发送
     FIX::Session::sendToTarget(msg);
